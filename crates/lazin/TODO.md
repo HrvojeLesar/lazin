@@ -9,3 +9,4 @@ Expected features
 - [ ] Encryption/Decryption
     - [ ] Allow users to encrypt desired files
     - [ ] Check git or cache a hash of the original file
+- [ ] Custom config language, toml like with @Attributes
