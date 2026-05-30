@@ -1,5 +1,5 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/lazin",
+    "crates/lazin", "crates/lazin_logger",
 ]
