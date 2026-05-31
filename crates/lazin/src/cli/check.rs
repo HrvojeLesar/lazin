@@ -15,7 +15,7 @@ impl Check {
         let directory = self.directory();
         let files = common::files(directory)?;
 
-        let workspaces_and_modules = common::parse(&files)?;
+        let _workspaces_and_modules = common::parse(&files)?;
 
         Ok(())
     }

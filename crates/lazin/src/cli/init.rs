@@ -1,6 +1,7 @@
 use crate::{
     common,
-    dotfiles::filesystem::init::{init_default_config, init_directory}, error::Error,
+    dotfiles::filesystem::init::{init_default_config, init_directory},
+    error::Error,
 };
 use clap::Args;
 use std::path::{Path, PathBuf};

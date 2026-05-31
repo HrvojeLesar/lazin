@@ -4,11 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    diagnostics::toml::TomlDiagnostic,
-    dotfiles::{module::Modules, workspace::Workspace},
-    error::Error,
-};
+use crate::{diagnostics::toml::TomlDiagnostic, dotfiles::config::Config, error::Error};
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
 
@@ -32,11 +28,6 @@ impl TomlFile {
     }
 }
 
-pub struct WorkspacesAndModules {
-    pub workspaces: Workspace,
-    pub modules: Modules,
-}
-
 pub fn directory(path: Option<&Path>) -> &Path {
     path.unwrap_or(Path::new(DEFAULT_DIRECTORY))
 }
@@ -58,55 +49,33 @@ pub fn files(directory: &Path) -> Result<Vec<TomlFile>, Error> {
     Ok(files)
 }
 
-pub fn parse(files: &[TomlFile]) -> Result<WorkspacesAndModules, Error> {
+pub fn parse(files: &[TomlFile]) -> Result<Config, Error> {
     fn read_file(path: &Path) -> Result<String, Error> {
         fs::read_to_string(path).map_err(Error::from)
     }
 
-    let mut modules = Modules::empty();
-    let mut workspaces = Workspace::empty();
-
-    let mut modules_error: Option<Error> = None;
-    let mut workspace_error: Option<Error> = None;
+    let mut config = Config::empty();
+    let mut error = None;
 
     for file in files {
         let data = read_file(&file.path)?;
-        match Modules::parse(&data) {
-            Ok(other_modules) => modules.join(other_modules)?,
+        match Config::parse(&data) {
+            Ok(other) => config.join(other)?,
             Err(e) => {
                 TomlDiagnostic::new(&file.filename, &data, &e).emit();
-                if modules_error.is_none() {
-                    modules_error.replace(e);
-                }
-            }
-        }
-        match Workspace::parse(&data) {
-            Ok(other_workspace) => workspaces.join(other_workspace)?,
-            Err(e) => {
-                TomlDiagnostic::new(&file.filename, &data, &e).emit();
-                if workspace_error.is_none() {
-                    workspace_error.replace(e);
+                if error.is_none() {
+                    error.replace(e);
                 }
             }
         }
     }
 
-    if let Some(error) = modules_error {
+    if let Some(error) = error {
         match error {
-            Error::TomlParse(_) => return Err(Error::Custom("error in module parsing")),
+            Error::TomlParse(_) => return Err(Error::Custom("error in config parsing")),
             _ => return Err(error),
         }
     }
 
-    if let Some(error) = workspace_error {
-        match error {
-            Error::TomlParse(_) => return Err(Error::Custom("error in workspace parsing")),
-            _ => return Err(error),
-        }
-    }
-
-    Ok(WorkspacesAndModules {
-        workspaces,
-        modules,
-    })
+    Ok(config)
 }

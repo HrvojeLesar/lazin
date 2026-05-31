@@ -1,10 +1,7 @@
-use crate::{
-    common::Key,
-    error::{DuplicateKeysError, Error},
-};
+use crate::common::Key;
 use serde::Deserialize;
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::HashMap,
     path::{Path, PathBuf},
 };
 
@@ -56,102 +53,3 @@ impl Module {
 
 #[derive(Debug, Deserialize)]
 pub struct Modules(HashMap<Key, Module>);
-
-impl Modules {
-    pub fn empty() -> Self {
-        Self(HashMap::default())
-    }
-
-    pub fn parse(input: &str) -> Result<Self, Error> {
-        toml::from_str(input).map_err(|e| e.into())
-    }
-
-    pub fn modules(&self) -> impl Iterator<Item = (&Key, &Module)> {
-        self.0.iter()
-    }
-
-    pub fn join(&mut self, other: Modules) -> Result<(), DuplicateKeysError> {
-        let mut duplicate_keys_errors = Vec::new();
-
-        for (key, module) in other.0 {
-            match self.0.entry(key) {
-                Entry::Occupied(entry) => {
-                    duplicate_keys_errors.push(entry.key().clone());
-                }
-                Entry::Vacant(entry) => {
-                    entry.insert(module);
-                }
-            }
-        }
-
-        if !duplicate_keys_errors.is_empty() {
-            return Err(DuplicateKeysError {
-                duplicates: duplicate_keys_errors,
-            });
-        }
-
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::dotfiles::module::Modules;
-
-    #[test]
-    fn parse_module_names() {
-        let raw = r#"
-        [conf1]
-        [conf2]
-        "#;
-
-        let result = Modules::parse(raw).expect("raw value should be valid modules config");
-
-        assert!(result.modules().any(|i| i.0.str() == "conf1"));
-        assert!(result.modules().any(|i| i.0.str() == "conf2"));
-    }
-
-    #[test]
-    fn parse_basic_modules() {
-        let raw = r#"
-        [conf1]
-        module1="/some/path"
-        module2="/other/path"
-        module3="/composite/path"
-        "#;
-
-        let result = Modules::parse(raw).expect("raw value should be valid modules config");
-        let module = result
-            .modules()
-            .find(|i| i.0.str() == "conf1")
-            .expect("a valid module");
-
-        let module1_path = module
-            .1
-            .values_pairs()
-            .find(|v| v.0.str() == "module1")
-            .expect("a valid value pair")
-            .1
-            .path();
-
-        let module2_path = module
-            .1
-            .values_pairs()
-            .find(|v| v.0.str() == "module2")
-            .expect("a valid value pair")
-            .1
-            .path();
-
-        let module3_path = module
-            .1
-            .values_pairs()
-            .find(|v| v.0.str() == "module3")
-            .expect("a valid value pair")
-            .1
-            .path();
-
-        assert_eq!(module1_path, "/some/path");
-        assert_eq!(module2_path, "/other/path");
-        assert_eq!(module3_path, "/composite/path");
-    }
-}
