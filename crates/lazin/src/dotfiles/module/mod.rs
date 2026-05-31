@@ -1,8 +1,10 @@
-use crate::{common::Key, error::Error};
-
+use crate::{
+    common::Key,
+    error::{DuplicateKeysError, Error},
+};
 use serde::Deserialize;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map::Entry},
     path::{Path, PathBuf},
 };
 
@@ -56,12 +58,39 @@ impl Module {
 pub struct Modules(HashMap<Key, Module>);
 
 impl Modules {
+    pub fn empty() -> Self {
+        Self(HashMap::default())
+    }
+
     pub fn parse(input: &str) -> Result<Self, Error> {
         toml::from_str(input).map_err(|e| e.into())
     }
 
     pub fn modules(&self) -> impl Iterator<Item = (&Key, &Module)> {
         self.0.iter()
+    }
+
+    pub fn join(&mut self, other: Modules) -> Result<(), DuplicateKeysError> {
+        let mut duplicate_keys_errors = Vec::new();
+
+        for (key, module) in other.0 {
+            match self.0.entry(key) {
+                Entry::Occupied(entry) => {
+                    duplicate_keys_errors.push(entry.key().clone());
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(module);
+                }
+            }
+        }
+
+        if !duplicate_keys_errors.is_empty() {
+            return Err(DuplicateKeysError {
+                duplicates: duplicate_keys_errors,
+            });
+        }
+
+        Ok(())
     }
 }
 

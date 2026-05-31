@@ -9,6 +9,7 @@ pub mod version;
 #[derive(Subcommand)]
 enum Commands {
     Init(init::Init),
+    Check(check::Check),
 }
 
 #[derive(Parser)]
@@ -36,6 +37,7 @@ impl Cli {
 
         let result: Result<(), Error> = match cli.commands {
             Some(Commands::Init(cmd)) => cmd.init(),
+            Some(Commands::Check(cmd)) => cmd.check(),
             None => Ok(()),
         };
 

@@ -1,3 +1,4 @@
+use crate::error::Error;
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
     files::SimpleFile,
@@ -6,9 +7,8 @@ use codespan_reporting::{
         termcolor::{ColorChoice, StandardStream},
     },
 };
-use crate::error::Error;
 
-struct TomlDiagnostic<'a> {
+pub struct TomlDiagnostic<'a> {
     filename: &'a str,
     source: &'a str,
     error: &'a Error,
@@ -26,7 +26,7 @@ impl<'a> TomlDiagnostic<'a> {
     pub fn emit(&self) {
         if let Error::TomlParse(error) = self.error {
             let span = error.span().unwrap();
-            let file = SimpleFile::new("raw", self.source);
+            let file = SimpleFile::new(self.filename, self.source);
 
             let diagnostic = Diagnostic::error()
                 .with_message(error.message())

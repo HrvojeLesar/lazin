@@ -19,7 +19,7 @@ const LAZIN_DEFAULT_MODULE: &str = r#"# [my_module]
 # source_dir="/.config/source_dir"
 # "more/specific/path/to/source_file"="/.config/my_program/source_file"
 # source_file_with_attributes = {
-#   path = "/.config/my_program/source_file_with_attributes"
+#   path = "/.config/my_program/source_file_with_attributes",
 #   encrypt = false # encrypt is optional
 # }
 "#;
