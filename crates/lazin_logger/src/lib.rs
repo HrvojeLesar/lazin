@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub enum Level {
     Trace,
@@ -8,41 +8,70 @@ pub enum Level {
     Error,
 }
 
+enum Coloured {
+    Yes,
+    No,
+}
+
 impl Level {
-    fn prefix(&self) -> &'static str {
-        match self {
-            Level::Trace => "TRACE",
-            Level::Debug => "DEBUG",
-            Level::Info => "INFO",
-            Level::Warn => "WARN",
-            Level::Error => "ERROR",
+    fn prefix(&self, coloured: Coloured) -> &'static str {
+        match (self, coloured) {
+            (Level::Trace, Coloured::No) => "TRACE",
+            (Level::Debug, Coloured::No) => "DEBUG",
+            (Level::Info, Coloured::No) => "INFO",
+            (Level::Warn, Coloured::No) => "WARN",
+            (Level::Error, Coloured::No) => "ERROR",
+
+            (Level::Trace, Coloured::Yes) => "\x1b[36mTRACE\x1b[0m",
+            (Level::Debug, Coloured::Yes) => "\x1b[32mDEBUG\x1b[0m",
+            (Level::Info, Coloured::Yes) => "\x1b[34mINFO\x1b[0m",
+            (Level::Warn, Coloured::Yes) => "\x1b[33mWARN\x1b[0m",
+            (Level::Error, Coloured::Yes) => "\x1b[31mERROR\x1b[0m",
         }
     }
 }
 
-impl Display for Level {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.prefix())
-    }
+struct InnerLogger {
+    coloured: AtomicBool,
 }
 
-struct InnerLogger;
 impl InnerLogger {
+    const fn new() -> Self {
+        Self {
+            coloured: AtomicBool::new(true),
+        }
+    }
+
+    fn coloured(&self) -> Coloured {
+        match self.coloured.load(Ordering::Relaxed) {
+            true => Coloured::Yes,
+            false => Coloured::No,
+        }
+    }
+
     fn log(&self, level: Level, message: &str) {
-        println!("{level}: {message}")
+        println!("{}: {}", level.prefix(self.coloured()), message)
+    }
+
+    fn print(&self, message: &str) {
+        println!("{}", message)
     }
 }
 
-pub struct Logger(InnerLogger);
-impl Logger {
+pub struct LazinLogger(InnerLogger);
+impl LazinLogger {
     pub fn log(&self, level: Level, message: &str) {
         self.0.log(level, message);
     }
+
+    pub fn print(&self, message: &str) {
+        self.0.print(message);
+    }
 }
 
-static LOGGER: Logger = Logger(InnerLogger);
+static LOGGER: LazinLogger = LazinLogger(InnerLogger::new());
 
-pub fn default_logger() -> &'static Logger {
+pub fn default_logger() -> &'static LazinLogger {
     &LOGGER
 }
 
@@ -56,6 +85,8 @@ macro_rules! info{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::
 macro_rules! warn{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Warn,  &format!($($a)*)) }; }
 #[macro_export]
 macro_rules! error{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Error,  &format!($($a)*)) }; }
+#[macro_export]
+macro_rules! print{ ($($a:tt)*) => { $crate::default_logger().print(&format!($($a)*)) }; }
 
 #[cfg(test)]
 mod test {
