@@ -1,3 +1,8 @@
+use crate::cli::Cli;
+
+mod cli;
 mod dotfiles;
 
-fn main() {}
+fn main() {
+    Cli::main();
+}

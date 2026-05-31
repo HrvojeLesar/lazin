@@ -1,5 +1,5 @@
 use std::{
-    fs::OpenOptions,
+    fs::{self, OpenOptions},
     io::{ErrorKind, Write},
     path::Path,
 };
@@ -9,15 +9,13 @@ use crate::dotfiles::error::Error;
 const LAZIN_DEFAULT_WORKSPACE_FILE: &str = "workspace.toml";
 const LAZIN_DEFAULT_MODULE_FILE: &str = "modules.toml";
 
-const LAZIN_DEFAULT_WORKSPACE: &str = r#"
-# workspace_name = [
+const LAZIN_DEFAULT_WORKSPACE: &str = r#"# workspace_name = [
 # "module1",
 # "module2",
 # ]
 "#;
 
-const LAZIN_DEFAULT_MODULE: &str = r#"
-# [my_module]
+const LAZIN_DEFAULT_MODULE: &str = r#"# [my_module]
 # source_file="/.config/my_program/source_file"
 # source_dir="/.config/source_dir"
 # "more/specific/path/to/source_file"="/.config/my_program/source_file"
@@ -54,6 +52,10 @@ fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> Result<WriteF
     Ok(write_state)
 }
 
+pub fn init_directory(directory: &Path) -> Result<(), Error> {
+    fs::create_dir_all(directory).map_err(|e| e.into())
+}
+
 pub fn init_default_config(base_dir: &Path) -> Result<(), Error> {
     let lazin_default_workspace = try_write_file(
         base_dir,
@@ -86,11 +88,35 @@ pub fn init_default_config(base_dir: &Path) -> Result<(), Error> {
 
 #[cfg(test)]
 mod test {
-    use crate::dotfiles::filesystem::{init::init_default_config, tmp::TempDir};
+    use std::fs;
+
+    use crate::dotfiles::filesystem::{
+        init::{init_default_config, init_directory},
+        tmp::TempDir,
+    };
 
     #[test]
     fn temp_default_config() {
         let temp_dir = TempDir::new();
         init_default_config(temp_dir.path()).expect("initialized config file examples")
+    }
+
+    #[test]
+    fn temp_init_directory() {
+        let temp_dir = TempDir::new();
+        init_directory(temp_dir.path()).expect("initialized temp directory");
+        assert!(
+            fs::metadata(temp_dir.path())
+                .expect("valid metadata")
+                .is_dir()
+        );
+    }
+
+    #[test]
+    fn temp_init_directory_nested() {
+        let temp_dir = TempDir::new();
+        let temp_dir = temp_dir.path().join("child1").join("child2");
+        init_directory(&temp_dir).expect("initialized temp directory");
+        assert!(fs::metadata(&temp_dir).expect("valid metadata").is_dir());
     }
 }

@@ -4,6 +4,7 @@ use std::fmt::Display;
 pub enum Error {
     TomlParseError(toml::de::Error),
     IoError(std::io::Error),
+    Custom(&'static str),
 }
 
 impl Display for Error {
@@ -11,6 +12,7 @@ impl Display for Error {
         match self {
             Error::TomlParseError(error) => error.fmt(f),
             Error::IoError(error) => error.fmt(f),
+            Error::Custom(c) => write!(f, "{}", c),
         }
     }
 }

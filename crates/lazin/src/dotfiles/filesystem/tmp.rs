@@ -7,7 +7,7 @@ use std::{
 
 static FILE_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-fn next_file() -> String {
+fn next_unique_file_ext() -> String {
     format!(
         "{}",
         FILE_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
@@ -18,7 +18,7 @@ pub struct TempFilepath(PathBuf);
 
 impl TempFilepath {
     pub fn new() -> Self {
-        let file_path = env::temp_dir().join(next_file());
+        let file_path = env::temp_dir().join(Self::next_file());
         OpenOptions::new()
             .create_new(true)
             .write(true)
@@ -31,11 +31,15 @@ impl TempFilepath {
     pub fn new_with_parent_dir(parent_dir: &Path) -> Self {
         assert!(parent_dir.is_dir(), "not a directory");
 
-        Self(parent_dir.join(next_file()))
+        Self(parent_dir.join(Self::next_file()))
     }
 
     pub fn path(&self) -> &Path {
         self.0.as_path()
+    }
+
+    fn next_file() -> String {
+        format!("lazin_test_file_{}", next_unique_file_ext())
     }
 }
 
@@ -49,13 +53,17 @@ pub struct TempDir(PathBuf);
 
 impl TempDir {
     pub fn new() -> Self {
-        let dir_path = env::temp_dir().join(next_file());
+        let dir_path = env::temp_dir().join(Self::next_dir());
         fs::create_dir(&dir_path).expect("a valid temp directory path");
         Self(dir_path)
     }
 
     pub fn path(&self) -> &Path {
         self.0.as_path()
+    }
+
+    fn next_dir() -> String {
+        format!("lazin_test_dir_{}", next_unique_file_ext())
     }
 }
 
