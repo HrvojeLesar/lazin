@@ -2,16 +2,16 @@ use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum Error {
-    TomlParseError(toml::de::Error),
-    IoError(std::io::Error),
+    TomlParse(toml::de::Error),
+    Io(std::io::Error),
     Custom(&'static str),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::TomlParseError(error) => error.fmt(f),
-            Error::IoError(error) => error.fmt(f),
+            Error::TomlParse(error) => error.fmt(f),
+            Error::Io(error) => error.fmt(f),
             Error::Custom(c) => write!(f, "{}", c),
         }
     }
@@ -19,12 +19,12 @@ impl Display for Error {
 
 impl From<toml::de::Error> for Error {
     fn from(value: toml::de::Error) -> Self {
-        Self::TomlParseError(value)
+        Self::TomlParse(value)
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
-        Self::IoError(value)
+        Self::Io(value)
     }
 }

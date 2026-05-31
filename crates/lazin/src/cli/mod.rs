@@ -38,8 +38,9 @@ impl Cli {
             None => Ok(()),
         };
 
+        // TODO: Better errors
         if let Err(e) = result {
-            lazin_logger::error!("{}", e);
+            lazin_logger::error!(e);
         }
     }
 }

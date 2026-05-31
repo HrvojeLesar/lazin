@@ -99,18 +99,37 @@ pub fn quiet(quiet: bool) {
     default_logger().shutup(quiet)
 }
 
+#[doc(hidden)]
 #[macro_export]
-macro_rules! trace{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Trace,  &format!($($a)*)) }; }
+macro_rules! __log {
+    ($level:expr, $value:expr) => {
+        $crate::default_logger().log($level, &format!("{}", $value))
+    };
+    ($level:expr, $($a:tt)*) => {
+        $crate::default_logger().log($level, &format!($($a)*))
+    };
+}
+
 #[macro_export]
-macro_rules! debug{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Debug,  &format!($($a)*)) }; }
+macro_rules! trace { ($($a:tt)*) => { $crate::__log!($crate::Level::Trace, $($a)*) }; }
 #[macro_export]
-macro_rules! info{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Info,  &format!($($a)*)) }; }
+macro_rules! debug { ($($a:tt)*) => { $crate::__log!($crate::Level::Debug, $($a)*) }; }
 #[macro_export]
-macro_rules! warn{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Warn,  &format!($($a)*)) }; }
+macro_rules! info  { ($($a:tt)*) => { $crate::__log!($crate::Level::Info,  $($a)*) }; }
 #[macro_export]
-macro_rules! error{ ($($a:tt)*) => { $crate::default_logger().log($crate::Level::Error,  &format!($($a)*)) }; }
+macro_rules! warn  { ($($a:tt)*) => { $crate::__log!($crate::Level::Warn,  $($a)*) }; }
 #[macro_export]
-macro_rules! print{ ($($a:tt)*) => { $crate::default_logger().print(&format!($($a)*)) }; }
+macro_rules! error { ($($a:tt)*) => { $crate::__log!($crate::Level::Error, $($a)*) }; }
+
+#[macro_export]
+macro_rules! print {
+    ($level:expr, $value:expr) => {
+        $crate::default_logger().print(&format!("{}", $value))
+    };
+    ($level:expr, $($a:tt)*) => {
+        $crate::default_logger().printn(&format!($($a)*))
+    };
+}
 
 #[cfg(test)]
 mod test {

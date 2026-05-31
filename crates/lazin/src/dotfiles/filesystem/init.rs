@@ -90,9 +90,9 @@ pub fn init_default_config(base_dir: &Path) -> Result<(), Error> {
 mod test {
     use std::fs;
 
-    use crate::dotfiles::filesystem::{
-        init::{init_default_config, init_directory},
-        tmp::TempDir,
+    use crate::{
+        dotfiles::filesystem::init::{init_default_config, init_directory},
+        test::filesystem::tmp::TempDir,
     };
 
     #[test]
