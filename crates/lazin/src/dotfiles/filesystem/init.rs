@@ -1,10 +1,9 @@
+use crate::error::Error;
 use std::{
     fs::{self, OpenOptions},
     io::{ErrorKind, Write},
     path::Path,
 };
-
-use crate::dotfiles::error::Error;
 
 const LAZIN_DEFAULT_WORKSPACE_FILE: &str = "workspace.toml";
 const LAZIN_DEFAULT_MODULE_FILE: &str = "modules.toml";

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::{collections::HashMap, convert::Into};
 
-use crate::dotfiles::{common::Key, error::Error};
+use crate::{common::Key, error::Error};
 
 #[derive(Debug, Deserialize)]
 pub struct Workspace {

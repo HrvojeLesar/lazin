@@ -6,8 +6,7 @@ use codespan_reporting::{
         termcolor::{ColorChoice, StandardStream},
     },
 };
-
-use crate::dotfiles::error::Error;
+use crate::error::Error;
 
 struct TomlDiagnostic<'a> {
     filename: &'a str,

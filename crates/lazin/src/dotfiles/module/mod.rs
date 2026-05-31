@@ -1,4 +1,4 @@
-use crate::dotfiles::{common::Key, error::Error};
+use crate::{common::Key, error::Error};
 
 use serde::Deserialize;
 use std::{

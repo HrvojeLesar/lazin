@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
-
-use crate::dotfiles::filesystem::init::{init_default_config, init_directory};
-
-use super::error::Error;
+use crate::{
+    common,
+    dotfiles::filesystem::init::{init_default_config, init_directory}, error::Error,
+};
 use clap::Args;
+use std::path::{Path, PathBuf};
 
 /// Initializes new `lazin` example configuration
 ///
@@ -19,8 +19,6 @@ pub(super) struct Init {
 }
 
 impl Init {
-    const DEFAULT_DIRECTORY: &str = "lazin";
-
     pub(crate) fn init(&self) -> Result<(), Error> {
         let directory = self.directory();
 
@@ -31,9 +29,7 @@ impl Init {
     }
 
     fn directory(&self) -> &Path {
-        self.directory
-            .as_deref()
-            .unwrap_or(Path::new(Self::DEFAULT_DIRECTORY))
+        common::directory(self.directory.as_deref())
     }
 }
 
@@ -41,12 +37,12 @@ impl Init {
 mod test {
     use std::path::{Path, PathBuf};
 
-    use crate::{cli::init::Init, test::filesystem::tmp::TempDir};
+    use crate::{cli::init::Init, common, test::filesystem::tmp::TempDir};
 
     #[test]
     fn defaults_to_lazin_directory() {
         let init = Init { directory: None };
-        assert_eq!(init.directory(), Path::new(Init::DEFAULT_DIRECTORY));
+        assert_eq!(init.directory(), common::DEFAULT_DIRECTORY);
     }
 
     #[test]

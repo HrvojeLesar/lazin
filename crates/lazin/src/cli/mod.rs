@@ -1,7 +1,8 @@
 use clap::{ArgAction, Parser, Subcommand};
-use error::Error;
 
-pub mod error;
+use crate::error::Error;
+
+pub mod check;
 pub mod init;
 pub mod version;
 
