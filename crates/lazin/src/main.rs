@@ -1,6 +1,7 @@
 use crate::cli::Cli;
 
 mod cli;
+mod diagnostics;
 mod dotfiles;
 
 #[cfg(test)]
