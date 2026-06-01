@@ -22,7 +22,11 @@ impl Display for Error {
             Error::TomlParse(error) => error.fmt(f),
             Error::Io(error) => error.fmt(f),
             Error::DuplicateKeys(error) => {
-                write!(f, "{}", duplicate_keys_string(error))
+                write!(
+                    f,
+                    "Found duplicate keys, please make all workspaces and module names unique: {}",
+                    duplicate_keys_string(error)
+                )
             }
             Error::Custom(c) => write!(f, "{}", c),
         }

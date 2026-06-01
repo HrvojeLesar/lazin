@@ -4,6 +4,11 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
 pub struct Workspace {
-    #[serde(flatten)]
     modules: Vec<Key>,
+}
+
+impl Workspace {
+    pub fn modules(&self) -> &[Key] {
+        &self.modules
+    }
 }

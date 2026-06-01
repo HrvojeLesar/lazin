@@ -55,3 +55,82 @@ impl Config {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::{Config, Entry};
+    use crate::common::Key;
+
+    fn entry<'a>(config: &'a Config, name: &str) -> &'a Entry {
+        config
+            .entries
+            .iter()
+            .find(|(key, _)| key.str() == name)
+            .map(|(_, entry)| entry)
+            .unwrap_or_else(|| panic!("no entry named `{name}`"))
+    }
+
+    #[test]
+    fn parses_workspace_members() {
+        let config = Config::parse(r#"workspace1 = ["module1", "module2"]"#)
+            .expect("a valid workspace config");
+
+        match entry(&config, "workspace1") {
+            Entry::Workspace(workspace) => {
+                let members: Vec<&str> = workspace.modules().iter().map(Key::str).collect();
+                assert_eq!(members, ["module1", "module2"]);
+            }
+            Entry::Module(_) => panic!("`workspace1` should be classified as a workspace"),
+        }
+    }
+
+    #[test]
+    fn parses_empty_workspace() {
+        let config = Config::parse("workspace1 = []").expect("a valid empty workspace");
+
+        match entry(&config, "workspace1") {
+            Entry::Workspace(workspace) => assert!(workspace.modules().is_empty()),
+            Entry::Module(_) => panic!("an empty array should be classified as a workspace"),
+        }
+    }
+
+    #[test]
+    fn parses_multiple_workspaces() {
+        let config = Config::parse(
+            r#"
+            workspace1 = ["module1"]
+            workspace2 = ["module2", "module3"]
+            "#,
+        )
+        .expect("valid workspaces");
+
+        assert!(matches!(entry(&config, "workspace1"), Entry::Workspace(_)));
+        assert!(matches!(entry(&config, "workspace2"), Entry::Workspace(_)));
+    }
+
+    #[test]
+    fn distinguishes_workspaces_from_modules() {
+        let config = Config::parse(
+            r#"
+            workspace1 = ["module1"]
+
+            [module1]
+            file = "/some/path"
+            "#,
+        )
+        .expect("a valid mixed config");
+
+        assert!(matches!(entry(&config, "workspace1"), Entry::Workspace(_)));
+        assert!(matches!(entry(&config, "module1"), Entry::Module(_)));
+    }
+
+    #[test]
+    fn rejects_workspace_with_non_string_members() {
+        let result = Config::parse("workspace1 = [1, 2, 3]");
+
+        assert!(
+            result.is_err(),
+            "numeric array members must not parse as a workspace"
+        );
+    }
+}
