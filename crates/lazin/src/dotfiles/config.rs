@@ -64,6 +64,16 @@ impl Config {
             })
             .collect()
     }
+
+    pub fn modules(&self) -> Vec<(&Key, &Module)> {
+        self.entries
+            .iter()
+            .filter_map(|entry| match entry.1 {
+                Entry::Workspace(_) => None,
+                Entry::Module(m) => Some((entry.0, m)),
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
