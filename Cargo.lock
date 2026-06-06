@@ -150,12 +150,17 @@ dependencies = [
  "clap",
  "codespan-reporting",
  "lazin_logger",
+ "lazin_pipeline",
  "serde",
  "toml",
 ]
 
 [[package]]
 name = "lazin_logger"
+version = "0.1.0"
+
+[[package]]
+name = "lazin_pipeline"
 version = "0.1.0"
 
 [[package]]
