@@ -8,7 +8,7 @@ use crate::{diagnostics::toml::TomlDiagnostic, dotfiles::config::Config, error::
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
 
-#[derive(Debug, Clone, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Key(String);
 
 impl Key {
@@ -78,4 +78,11 @@ pub fn parse(files: &[TomlFile]) -> Result<Config, Error> {
     }
 
     Ok(config)
+}
+
+pub fn parse_config(config_directory: Option<&Path>) -> Result<Config, Error> {
+    let directory = directory(config_directory);
+    let files = files(directory)?;
+
+    parse(&files)
 }

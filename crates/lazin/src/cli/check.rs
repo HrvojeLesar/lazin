@@ -1,7 +1,7 @@
-use crate::{common, error::Error};
+use crate::{common::parse_config, error::Error};
 
 use clap::Args;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// Check configuration validity
 #[derive(Args)]
@@ -12,15 +12,8 @@ pub(super) struct Check {
 
 impl Check {
     pub(crate) fn check(&self) -> Result<(), Error> {
-        let directory = self.directory();
-        let files = common::files(directory)?;
-
-        common::parse(&files)?;
+        parse_config(self.directory.as_deref())?;
 
         Ok(())
-    }
-
-    fn directory(&self) -> &Path {
-        common::directory(self.directory.as_deref())
     }
 }

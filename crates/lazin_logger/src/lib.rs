@@ -123,11 +123,11 @@ macro_rules! error { ($($a:tt)*) => { $crate::__log!($crate::Level::Error, $($a)
 
 #[macro_export]
 macro_rules! print {
-    ($level:expr, $value:expr) => {
+    ($value:expr) => {
         $crate::default_logger().print(&format!("{}", $value))
     };
-    ($level:expr, $($a:tt)*) => {
-        $crate::default_logger().printn(&format!($($a)*))
+    ($($a:tt)*) => {
+        $crate::default_logger().print(&format!($($a)*))
     };
 }
 

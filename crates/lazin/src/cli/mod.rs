@@ -1,9 +1,12 @@
+use std::process::exit;
+
 use clap::{ArgAction, Parser, Subcommand};
 
 use crate::error::Error;
 
 pub mod check;
 pub mod init;
+pub mod list_workspaces;
 pub mod version;
 
 #[derive(Subcommand)]
@@ -21,6 +24,12 @@ pub struct Cli {
     commands: Option<Commands>,
     #[arg(short = 'q', long = "quiet", help = "Suppress all non error output")]
     quiet: bool,
+    #[arg(
+        short = 'l',
+        long = "list-workspaces",
+        help = "List configured workspace keys"
+    )]
+    list_workspaces: bool,
 }
 
 impl Cli {
@@ -28,7 +37,11 @@ impl Cli {
         let cli = Self::parse();
 
         if cli.version {
-            version::version()
+            version::version();
+            exit(0)
+        }
+        if cli.list_workspaces {
+            handle_error(list_workspaces::list_workspaces(None))
         }
 
         if cli.quiet {
@@ -41,9 +54,14 @@ impl Cli {
             None => Ok(()),
         };
 
-        // TODO: Better errors
-        if let Err(e) = result {
-            lazin_logger::error!(e);
-        }
+        handle_error(result);
+    }
+}
+
+fn handle_error<T>(result: Result<T, Error>) {
+    // TODO: Better errors
+    if let Err(e) = result {
+        lazin_logger::error!(e);
+        exit(1)
     }
 }
