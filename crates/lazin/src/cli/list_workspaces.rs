@@ -1,7 +1,7 @@
-use crate::{common, error::Error};
+use crate::{common, error::LazinResult};
 use std::path::Path;
 
-pub fn list_workspaces(config_directory: Option<&Path>) -> Result<(), Error> {
+pub fn list_workspaces(config_directory: Option<&Path>) -> LazinResult<()> {
     let config = common::parse_config(config_directory)?;
 
     let mut workspaces = config.workspaces();

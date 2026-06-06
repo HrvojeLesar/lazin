@@ -2,7 +2,7 @@ use std::process::exit;
 
 use clap::{ArgAction, Parser, Subcommand};
 
-use crate::error::Error;
+use crate::error::LazinResult;
 
 pub mod check;
 pub mod init;
@@ -48,7 +48,7 @@ impl Cli {
             lazin_logger::quiet(true);
         }
 
-        let result: Result<(), Error> = match cli.commands {
+        let result: LazinResult<()> = match cli.commands {
             Some(Commands::Init(cmd)) => cmd.init(),
             Some(Commands::Check(cmd)) => cmd.check(),
             None => Ok(()),
@@ -58,7 +58,7 @@ impl Cli {
     }
 }
 
-fn handle_error<T>(result: Result<T, Error>) {
+fn handle_error<T>(result: LazinResult<T>) {
     // TODO: Better errors
     if let Err(e) = result {
         lazin_logger::error!(e);

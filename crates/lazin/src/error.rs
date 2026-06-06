@@ -8,6 +8,8 @@ pub struct DuplicateKeysError {
     pub duplicates: DuplicateKeys,
 }
 
+pub type LazinResult<T> = Result<T, Error>;
+
 #[derive(Debug)]
 pub enum Error {
     TomlParse(toml::de::Error),

@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::error::LazinResult;
 use std::{
     fs::{self, OpenOptions},
     io::{ErrorKind, Write},
@@ -29,7 +29,7 @@ enum WriteFileState {
     Skipped,
 }
 
-fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> Result<WriteFileState, Error> {
+fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> LazinResult<WriteFileState> {
     let mut write_state = WriteFileState::Written;
 
     let new_file = OpenOptions::new()
@@ -51,11 +51,11 @@ fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> Result<WriteF
     Ok(write_state)
 }
 
-pub fn init_directory(directory: &Path) -> Result<(), Error> {
+pub fn init_directory(directory: &Path) -> LazinResult<()> {
     fs::create_dir_all(directory).map_err(|e| e.into())
 }
 
-pub fn init_default_config(base_dir: &Path) -> Result<(), Error> {
+pub fn init_default_config(base_dir: &Path) -> LazinResult<()> {
     let lazin_default_workspace = try_write_file(
         base_dir,
         LAZIN_DEFAULT_WORKSPACE_FILE,

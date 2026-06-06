@@ -4,7 +4,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{diagnostics::toml::TomlDiagnostic, dotfiles::config::Config, error::Error};
+use crate::{
+    diagnostics::toml::TomlDiagnostic,
+    dotfiles::config::Config,
+    error::{Error, LazinResult},
+};
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
 
@@ -32,7 +36,7 @@ pub fn directory(path: Option<&Path>) -> &Path {
     path.unwrap_or(Path::new(DEFAULT_DIRECTORY))
 }
 
-pub fn files(directory: &Path) -> Result<Vec<TomlFile>, Error> {
+pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     let mut files = Vec::new();
 
     for entry in fs::read_dir(directory).map_err(Error::from)? {
@@ -49,8 +53,8 @@ pub fn files(directory: &Path) -> Result<Vec<TomlFile>, Error> {
     Ok(files)
 }
 
-pub fn parse(files: &[TomlFile]) -> Result<Config, Error> {
-    fn read_file(path: &Path) -> Result<String, Error> {
+pub fn parse(files: &[TomlFile]) -> LazinResult<Config> {
+    fn read_file(path: &Path) -> LazinResult<String> {
         fs::read_to_string(path).map_err(Error::from)
     }
 
@@ -80,7 +84,7 @@ pub fn parse(files: &[TomlFile]) -> Result<Config, Error> {
     Ok(config)
 }
 
-pub fn parse_config(config_directory: Option<&Path>) -> Result<Config, Error> {
+pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
     let directory = directory(config_directory);
     let files = files(directory)?;
 

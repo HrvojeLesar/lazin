@@ -1,4 +1,4 @@
-use crate::{common::parse_config, error::Error, validator::module::ModuleValidator};
+use crate::{common::parse_config, error::LazinResult, validator::module::ModuleValidator};
 
 use clap::Args;
 use std::path::PathBuf;
@@ -11,7 +11,7 @@ pub(super) struct Check {
 }
 
 impl Check {
-    pub(crate) fn check(&self) -> Result<(), Error> {
+    pub(crate) fn check(&self) -> LazinResult<()> {
         let config = parse_config(self.directory.as_deref())?;
 
         let modules = config.modules();

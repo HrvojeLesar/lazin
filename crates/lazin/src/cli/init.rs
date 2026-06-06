@@ -1,7 +1,7 @@
 use crate::{
     common,
     dotfiles::filesystem::init::{init_default_config, init_directory},
-    error::Error,
+    error::LazinResult,
 };
 use clap::Args;
 use std::path::{Path, PathBuf};
@@ -20,7 +20,7 @@ pub(super) struct Init {
 }
 
 impl Init {
-    pub(crate) fn init(&self) -> Result<(), Error> {
+    pub(crate) fn init(&self) -> LazinResult<()> {
         let directory = self.directory();
 
         init_directory(directory)?;

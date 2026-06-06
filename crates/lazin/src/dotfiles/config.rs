@@ -5,7 +5,7 @@ use serde::Deserialize;
 use crate::{
     common::Key,
     dotfiles::{module::Module, workspace::Workspace},
-    error::{DuplicateKeysError, Error},
+    error::{DuplicateKeysError, Error, LazinResult},
 };
 
 #[derive(Debug, Deserialize)]
@@ -22,7 +22,7 @@ enum Entry {
 }
 
 impl Config {
-    pub fn parse(input: &str) -> Result<Self, Error> {
+    pub fn parse(input: &str) -> LazinResult<Self> {
         toml::from_str(input).map_err(Error::from)
     }
 
