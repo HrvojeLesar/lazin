@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, path::Path};
 
 use crate::common::Key;
 
@@ -15,7 +15,14 @@ pub enum Error {
     TomlParse(toml::de::Error),
     Io(std::io::Error),
     DuplicateKeys(DuplicateKeys),
+    DirectoryDoesNotExist(String),
     Custom(&'static str),
+}
+
+impl Error {
+    pub fn directory_does_not_exist(path: &Path) -> Self {
+        Self::DirectoryDoesNotExist(format!("{}", path.display()))
+    }
 }
 
 impl Display for Error {
@@ -31,6 +38,7 @@ impl Display for Error {
                 )
             }
             Error::Custom(c) => write!(f, "{}", c),
+            Error::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
         }
     }
 }

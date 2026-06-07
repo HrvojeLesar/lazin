@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::{
     fs,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 
@@ -86,6 +87,19 @@ pub fn parse(files: &[TomlFile]) -> LazinResult<Config> {
 
 pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
     let directory = directory(config_directory);
+
+    match directory.try_exists() {
+        Ok(exists) => {
+            if !exists {
+                return Err(Error::directory_does_not_exist(directory));
+            }
+        }
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => return Err(Error::directory_does_not_exist(directory)),
+            _ => return Err(e.into()),
+        },
+    }
+
     let files = files(directory)?;
 
     parse(&files)
