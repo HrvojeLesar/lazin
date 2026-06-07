@@ -2,7 +2,7 @@ use std::process::exit;
 
 use clap::{ArgAction, Parser, Subcommand};
 
-use crate::error::LazinResult;
+use crate::{common, error::LazinResult};
 
 pub mod check;
 pub mod init;
@@ -38,7 +38,7 @@ impl Cli {
 
         if cli.version {
             version::version();
-            exit(0)
+            common::exit_success();
         }
         if cli.list_workspaces {
             handle_error(list_workspaces::list_workspaces(None))
@@ -62,6 +62,6 @@ fn handle_error<T>(result: LazinResult<T>) {
     // TODO: Better errors
     if let Err(e) = result {
         lazin_logger::error!(e);
-        exit(1)
+        common::exit_error()
     }
 }

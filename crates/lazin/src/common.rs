@@ -3,12 +3,14 @@ use std::{
     fs,
     io::ErrorKind,
     path::{Path, PathBuf},
+    process::exit,
 };
 
 use crate::{
     diagnostics::toml::TomlDiagnostic,
     dotfiles::config::Config,
     error::{Error, LazinResult},
+    validator::module::{ModuleValidationError, ModuleValidator},
 };
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
@@ -103,4 +105,42 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
     let files = files(directory)?;
 
     parse(&files)
+}
+
+pub fn validate_config(config: &Config) -> Vec<ModuleValidationError<'_>> {
+    let modules = config.modules();
+    let mut validation_errors = Vec::new();
+    for (module_name, module) in modules {
+        validation_errors.extend(ModuleValidator::validate(module_name, module));
+    }
+
+    validation_errors
+}
+
+pub fn report_validation_errors(mut errors: Vec<ModuleValidationError>) {
+    errors.sort_by(|validation_a, validation_b| validation_a.key.cmp(validation_b.key));
+    errors.iter().for_each(|err| {
+        lazin_logger::error!(
+            "Module '{}' path '{}': {}",
+            err.module_name.str(),
+            err.key.str(),
+            err.validation
+        );
+    });
+}
+
+#[inline]
+pub fn exit_success() -> ! {
+    exit(0)
+}
+
+#[inline]
+pub fn exit_error() -> ! {
+    exit(1)
+}
+
+#[inline]
+#[allow(unused)]
+pub fn exit_error_with_code(code: i32) -> ! {
+    exit(code)
 }
