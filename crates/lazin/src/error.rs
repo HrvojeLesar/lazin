@@ -1,4 +1,16 @@
-use std::{fmt::Display, path::Path};
+use std::{
+    fmt::Display,
+    path::Path,
+};
+
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label},
+    files::SimpleFile,
+    term::{
+        self,
+        termcolor::Buffer,
+    },
+};
 
 use crate::common::Key;
 
@@ -8,11 +20,39 @@ pub struct DuplicateKeysError {
     pub duplicates: DuplicateKeys,
 }
 
-pub type LazinResult<T> = Result<T, Error>;
+pub type LazinError = Error;
+pub type LazinResult<T> = Result<T, LazinError>;
+
+#[derive(Debug)]
+pub struct TomlError {
+    pub filename: String,
+    pub source: String,
+    pub error: toml::de::Error,
+}
+
+impl Display for TomlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let span = self.error.span().expect("a valid span");
+        let file = SimpleFile::new(self.filename.as_str(), self.source.as_str());
+
+        let diagnostic = Diagnostic::error()
+            .with_message(self.error.message())
+            .with_label(Label::primary((), span));
+
+        let config = codespan_reporting::term::Config::default();
+        let mut buffer = Buffer::ansi();
+
+        term::emit_to_write_style(&mut buffer, &config, &file, &diagnostic)
+            .expect("a valid error emit");
+
+        let rendered = String::from_utf8(buffer.into_inner()).map_err(|_| std::fmt::Error)?;
+        write!(f, "{}", rendered)
+    }
+}
 
 #[derive(Debug)]
 pub enum Error {
-    TomlParse(toml::de::Error),
+    Toml(Box<TomlError>),
     Io(std::io::Error),
     DuplicateKeys(DuplicateKeys),
     DirectoryDoesNotExist(String),
@@ -28,12 +68,12 @@ impl Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::TomlParse(error) => error.fmt(f),
+            Error::Toml(error) => error.fmt(f),
             Error::Io(error) => error.fmt(f),
             Error::DuplicateKeys(error) => {
                 write!(
                     f,
-                    "Found duplicate keys, please make all workspaces and module names unique: {}",
+                    "Found duplicate keys, please make all workspaces and module names unique. Duplicate names: {}",
                     duplicate_keys_string(error)
                 )
             }
@@ -43,9 +83,9 @@ impl Display for Error {
     }
 }
 
-impl From<toml::de::Error> for Error {
-    fn from(value: toml::de::Error) -> Self {
-        Self::TomlParse(value)
+impl From<TomlError> for Error {
+    fn from(value: TomlError) -> Self {
+        Self::Toml(Box::new(value))
     }
 }
 
@@ -58,6 +98,16 @@ impl From<std::io::Error> for Error {
 impl From<DuplicateKeysError> for Error {
     fn from(value: DuplicateKeysError) -> Self {
         Self::DuplicateKeys(value.duplicates)
+    }
+}
+
+impl From<Vec<DuplicateKeysError>> for Error {
+    fn from(value: Vec<DuplicateKeysError>) -> Self {
+        let keys = value.into_iter().fold(Vec::new(), |mut acc, e| {
+            acc.extend(e.duplicates);
+            acc
+        });
+        Self::DuplicateKeys(keys)
     }
 }
 

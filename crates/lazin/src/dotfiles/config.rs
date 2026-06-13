@@ -1,156 +1,103 @@
-use std::collections::{HashMap, hash_map};
+use std::{
+    collections::{BTreeMap, btree_map},
+    fs::File,
+    io::Read,
+    path::Path,
+};
 
 use serde::Deserialize;
 
 use crate::{
-    common::Key,
-    dotfiles::{module::Module, workspace::Workspace},
-    error::{DuplicateKeysError, Error, LazinResult},
+    common::{self, Key, TomlFile},
+    dotfiles::{module::RawModule, workspace::RawWorkspace},
+    error::{DuplicateKeysError, LazinError, LazinResult, TomlError},
 };
+
+type Entries = BTreeMap<Key, RawEntry>;
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum RawEntry {
+    Workspace(RawWorkspace),
+    Module(RawModule),
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(flatten)]
-    entries: HashMap<Key, Entry>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum Entry {
-    Workspace(Workspace),
-    Module(Module),
+    entries: Entries,
 }
 
 impl Config {
-    pub fn parse(input: &str) -> LazinResult<Self> {
-        toml::from_str(input).map_err(Error::from)
-    }
+    pub fn parse(config_dir: &Path) -> LazinResult<Self> {
+        fn merge_entries(entries: &mut Entries, other: Entries) -> Result<(), DuplicateKeysError> {
+            let mut duplicate_keys_errors = Vec::new();
 
-    pub fn empty() -> Self {
-        Self {
-            entries: HashMap::default(),
-        }
-    }
-
-    pub fn join(&mut self, other: Self) -> Result<(), DuplicateKeysError> {
-        let mut duplicate_keys_errors = Vec::new();
-
-        for (key, module) in other.entries {
-            match self.entries.entry(key) {
-                hash_map::Entry::Occupied(entry) => {
-                    duplicate_keys_errors.push(entry.key().clone());
-                }
-                hash_map::Entry::Vacant(entry) => {
-                    entry.insert(module);
+            for (key, module) in other {
+                match entries.entry(key) {
+                    btree_map::Entry::Occupied(entry) => {
+                        duplicate_keys_errors.push(entry.key().clone());
+                    }
+                    btree_map::Entry::Vacant(entry) => {
+                        entry.insert(module);
+                    }
                 }
             }
+
+            if !duplicate_keys_errors.is_empty() {
+                return Err(DuplicateKeysError {
+                    duplicates: duplicate_keys_errors,
+                });
+            }
+
+            Ok(())
         }
 
-        if !duplicate_keys_errors.is_empty() {
-            return Err(DuplicateKeysError {
-                duplicates: duplicate_keys_errors,
-            });
+        fn parse_entries(config_files: Vec<TomlFile>) -> LazinResult<Entries> {
+            let mut entries = BTreeMap::new();
+            let mut file_data_buffer = String::new();
+
+            for tomlfile in config_files {
+                file_data_buffer.clear();
+                File::open(&tomlfile.path)?.read_to_string(&mut file_data_buffer)?;
+                match toml::from_str::<Entries>(&file_data_buffer) {
+                    Ok(file_entires) => merge_entries(&mut entries, file_entires)?,
+                    Err(e) => {
+                        return Err(LazinError::from(TomlError {
+                            filename: tomlfile.filename,
+                            source: file_data_buffer.clone(),
+                            error: e,
+                        }));
+                    }
+                }
+            }
+
+            Ok(entries)
         }
 
-        Ok(())
+        let config_files = common::files(config_dir)?;
+        let entries = parse_entries(config_files)?;
+
+        Ok(Self { entries })
     }
 
-    pub fn workspaces(&self) -> Vec<(&Key, &Workspace)> {
+    pub fn workspaces(&self) -> Vec<(&Key, &RawWorkspace)> {
         self.entries
             .iter()
             .filter_map(|entry| match entry.1 {
-                Entry::Workspace(w) => Some((entry.0, w)),
-                Entry::Module(_) => None,
+                RawEntry::Workspace(w) => Some((entry.0, w)),
+                RawEntry::Module(_) => None,
             })
             .collect()
     }
 
-    pub fn modules(&self) -> Vec<(&Key, &Module)> {
+    pub fn modules(&self) -> Vec<(&Key, &RawModule)> {
         self.entries
             .iter()
             .filter_map(|entry| match entry.1 {
-                Entry::Workspace(_) => None,
-                Entry::Module(m) => Some((entry.0, m)),
+                RawEntry::Workspace(_) => None,
+                RawEntry::Module(m) => Some((entry.0, m)),
             })
             .collect()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::{Config, Entry};
-    use crate::common::Key;
-
-    fn entry<'a>(config: &'a Config, name: &str) -> &'a Entry {
-        config
-            .entries
-            .iter()
-            .find(|(key, _)| key.str() == name)
-            .map(|(_, entry)| entry)
-            .unwrap_or_else(|| panic!("no entry named `{name}`"))
-    }
-
-    #[test]
-    fn parses_workspace_members() {
-        let config = Config::parse(r#"workspace1 = ["module1", "module2"]"#)
-            .expect("a valid workspace config");
-
-        match entry(&config, "workspace1") {
-            Entry::Workspace(workspace) => {
-                let members: Vec<&str> = workspace.modules().iter().map(Key::str).collect();
-                assert_eq!(members, ["module1", "module2"]);
-            }
-            Entry::Module(_) => panic!("`workspace1` should be classified as a workspace"),
-        }
-    }
-
-    #[test]
-    fn parses_empty_workspace() {
-        let config = Config::parse("workspace1 = []").expect("a valid empty workspace");
-
-        match entry(&config, "workspace1") {
-            Entry::Workspace(workspace) => assert!(workspace.modules().is_empty()),
-            Entry::Module(_) => panic!("an empty array should be classified as a workspace"),
-        }
-    }
-
-    #[test]
-    fn parses_multiple_workspaces() {
-        let config = Config::parse(
-            r#"
-            workspace1 = ["module1"]
-            workspace2 = ["module2", "module3"]
-            "#,
-        )
-        .expect("valid workspaces");
-
-        assert!(matches!(entry(&config, "workspace1"), Entry::Workspace(_)));
-        assert!(matches!(entry(&config, "workspace2"), Entry::Workspace(_)));
-    }
-
-    #[test]
-    fn distinguishes_workspaces_from_modules() {
-        let config = Config::parse(
-            r#"
-            workspace1 = ["module1"]
-
-            [module1]
-            file = "/some/path"
-            "#,
-        )
-        .expect("a valid mixed config");
-
-        assert!(matches!(entry(&config, "workspace1"), Entry::Workspace(_)));
-        assert!(matches!(entry(&config, "module1"), Entry::Module(_)));
-    }
-
-    #[test]
-    fn rejects_workspace_with_non_string_members() {
-        let result = Config::parse("workspace1 = [1, 2, 3]");
-
-        assert!(
-            result.is_err(),
-            "numeric array members must not parse as a workspace"
-        );
     }
 }

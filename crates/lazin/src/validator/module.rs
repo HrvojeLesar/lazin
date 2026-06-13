@@ -4,7 +4,7 @@ use lazin_pipeline::Bind;
 
 use crate::{
     common::Key,
-    dotfiles::module::{Module, ModuleValue},
+    dotfiles::module::{RawModule, ModuleValue},
 };
 
 type ValidationResult = Result<(), Validation>;
@@ -77,7 +77,7 @@ impl<'a> Deref for DestinationPath<'a> {
 
 pub struct ModuleValidationError<'a> {
     pub module_name: &'a Key,
-    pub module: &'a Module,
+    pub module: &'a RawModule,
     pub key: &'a Key,
     pub value: &'a ModuleValue,
     pub validation: Validation,
@@ -92,7 +92,7 @@ impl Display for ModuleValidationError<'_> {
 impl<'a> ModuleValidationError<'a> {
     fn new(
         module_name: &'a Key,
-        module: &'a Module,
+        module: &'a RawModule,
         key: &'a Key,
         value: &'a ModuleValue,
         validation: Validation,
@@ -112,7 +112,7 @@ pub struct ModuleValidator;
 impl ModuleValidator {
     pub fn validate<'a>(
         module_name: &'a Key,
-        module: &'a Module,
+        module: &'a RawModule,
     ) -> Vec<ModuleValidationError<'a>> {
         let mut errors = Vec::new();
         for (key, value) in module.values_pairs() {

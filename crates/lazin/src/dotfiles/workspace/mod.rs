@@ -3,11 +3,11 @@ use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-pub struct Workspace {
+pub struct RawWorkspace {
     modules: Vec<Key>,
 }
 
-impl Workspace {
+impl RawWorkspace {
     pub fn modules(&self) -> &[Key] {
         &self.modules
     }

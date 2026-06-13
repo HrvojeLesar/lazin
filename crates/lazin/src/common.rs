@@ -7,7 +7,6 @@ use std::{
 };
 
 use crate::{
-    diagnostics::toml::TomlDiagnostic,
     dotfiles::config::Config,
     error::{Error, LazinResult},
     validator::module::{ModuleValidationError, ModuleValidator},
@@ -56,40 +55,10 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     Ok(files)
 }
 
-pub fn parse(files: &[TomlFile]) -> LazinResult<Config> {
-    fn read_file(path: &Path) -> LazinResult<String> {
-        fs::read_to_string(path).map_err(Error::from)
-    }
-
-    let mut config = Config::empty();
-    let mut error = None;
-
-    for file in files {
-        let data = read_file(&file.path)?;
-        match Config::parse(&data) {
-            Ok(other) => config.join(other)?,
-            Err(e) => {
-                TomlDiagnostic::new(&file.filename, &data, &e).emit();
-                if error.is_none() {
-                    error.replace(e);
-                }
-            }
-        }
-    }
-
-    if let Some(error) = error {
-        match error {
-            Error::TomlParse(_) => return Err(Error::Custom("error in config parsing")),
-            _ => return Err(error),
-        }
-    }
-
-    Ok(config)
-}
-
 pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
     let directory = directory(config_directory);
 
+    // TODO: maybe make this block nicer
     match directory.try_exists() {
         Ok(exists) => {
             if !exists {
@@ -102,9 +71,7 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
         },
     }
 
-    let files = files(directory)?;
-
-    parse(&files)
+    Config::parse(directory)
 }
 
 pub fn validate_config(config: &Config) -> Vec<ModuleValidationError<'_>> {

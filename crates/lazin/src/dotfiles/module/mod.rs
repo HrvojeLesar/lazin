@@ -1,7 +1,7 @@
 use crate::common::Key;
 use serde::Deserialize;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
 };
 
@@ -38,18 +38,18 @@ impl ModuleValue {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Module {
+pub struct RawModule {
     #[serde(flatten)]
-    values: HashMap<Key, ModuleValue>,
+    values: BTreeMap<Key, ModuleValue>,
     #[serde(default)]
     encrypt: bool,
 }
 
-impl Module {
+impl RawModule {
     pub fn values_pairs(&self) -> impl Iterator<Item = (&Key, &ModuleValue)> {
         self.values.iter()
     }
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Modules(HashMap<Key, Module>);
+pub struct Modules(HashMap<Key, RawModule>);
