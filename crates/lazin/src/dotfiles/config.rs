@@ -17,7 +17,7 @@ type RawEntries = BTreeMap<Key, RawEntry>;
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum RawEntry {
+pub enum RawEntry {
     Workspace(RawWorkspace),
     Module(RawModule),
 }
@@ -25,7 +25,7 @@ enum RawEntry {
 #[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(flatten)]
-    entries: RawEntries,
+    pub entries: RawEntries,
 }
 
 impl Config {

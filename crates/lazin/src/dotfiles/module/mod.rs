@@ -1,9 +1,12 @@
-use crate::common::Key;
+use crate::{common::Key, error::LazinResult};
 use serde::Deserialize;
 use std::{
     collections::{BTreeMap, HashMap},
+    fs,
     path::{Path, PathBuf},
 };
+
+type FileSourceTargetPairs = BTreeMap<PathBuf, PathBuf>;
 
 #[derive(Debug, Deserialize)]
 pub struct ModuleCompositeValue {
@@ -53,12 +56,41 @@ impl RawModule {
 
 #[derive(Debug)]
 pub struct Module {
-    values: BTreeMap<Key, ModuleValue>,
+    name: Key,
+    values: BTreeMap<PathBuf, PathBuf>,
     encrypt: bool,
 }
 
-impl From<RawModule> for Module {
-    fn from(value: RawModule) -> Self {
-        todo!()
+impl Module {
+    pub fn parse(name: &Key, raw_module: &RawModule) -> LazinResult<Self> {
+        let mut values = BTreeMap::new();
+        for (source, target) in &raw_module.values {
+            let source = Path::new(source.str());
+            let expanded = expand_directory(source, target.path())?;
+            values.extend(expanded);
+        }
+
+        Ok(Self {
+            name: name.clone(),
+            values,
+            encrypt: raw_module.encrypt,
+        })
+    }
+}
+
+fn expand_directory(source: &Path, target: &Path) -> LazinResult<FileSourceTargetPairs> {
+    if !source.is_dir() {
+        let pairs = FileSourceTargetPairs::from([(source.into(), target.into())]);
+        Ok(pairs)
+    } else {
+        let expanded = fs::read_dir(source)?
+            .map(|child| -> LazinResult<FileSourceTargetPairs> {
+                let child = child?.file_name();
+                let child_source = PathBuf::from(source).join(&child);
+                let child_target = PathBuf::from(target).join(&child);
+                expand_directory(&child_source, &child_target)
+            })
+            .collect::<LazinResult<Vec<FileSourceTargetPairs>>>()?; // Use transposition of Iterator<Result<T,E>> -> Result<Sequence<T>, E>
+        Ok(expanded.into_iter().flatten().collect())
     }
 }

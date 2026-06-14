@@ -51,6 +51,7 @@ pub enum Error {
     DuplicateKeys(DuplicateKeys),
     DirectoryDoesNotExist(String),
     Custom(&'static str),
+    InvalidModuleSources,
 }
 
 impl Error {
@@ -73,6 +74,7 @@ impl Display for Error {
             }
             Error::Custom(c) => write!(f, "{}", c),
             Error::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
+            Error::InvalidModuleSources => write!(f, "Invalid module sources"),
         }
     }
 }
