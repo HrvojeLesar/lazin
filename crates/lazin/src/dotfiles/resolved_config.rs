@@ -88,7 +88,7 @@ fn expand_modules(validated_module_sources: Valid<SourceAndModulePairs>) -> Lazi
         .into_inner()
         .into_iter()
         .map(|(module_name, raw_module)| Module::parse(module_name, raw_module))
-        .flatten()
+        .flatten();
 
     Ok(())
 }

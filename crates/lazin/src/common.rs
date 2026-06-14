@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use std::{
+    fmt::Display,
     fs,
     io::ErrorKind,
     path::{Path, PathBuf},
@@ -20,6 +21,18 @@ pub struct Key(String);
 impl Key {
     pub fn str(&self) -> &str {
         self.0.as_str()
+    }
+}
+
+impl From<String> for Key {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -97,13 +110,35 @@ pub fn exit_success() -> ! {
     exit(0)
 }
 
-#[inline]
-pub fn exit_error() -> ! {
-    exit(1)
+#[macro_export]
+macro_rules! exit_error {
+    () => {{
+        std::process::exit(1)
+    }};
+    ($arg:expr) => {{
+        ::lazin_logger::error!($arg);
+        std::process::exit(1)
+    }};
+    ($($arg:tt)+) => {{
+        ::lazin_logger::error!($($arg)+);
+        std::process::exit(1)
+    }};
 }
 
 #[inline]
 #[allow(unused)]
 pub fn exit_error_with_code(code: i32) -> ! {
     exit(code)
+}
+pub fn check(config_directory: Option<&Path>) -> LazinResult<Config> {
+    let config = parse_config(config_directory)?;
+
+    let validation_errors = validate_config(&config);
+
+    if !validation_errors.is_empty() {
+        report_validation_errors(validation_errors);
+        exit_error!()
+    }
+
+    Ok(config)
 }

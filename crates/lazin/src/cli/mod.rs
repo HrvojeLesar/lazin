@@ -1,9 +1,10 @@
 use clap::{ArgAction, Parser, Subcommand};
 
-use crate::{common, error::LazinResult};
+use crate::{common, error::LazinResult, exit_error};
 
 pub mod check;
 pub mod init;
+pub mod link;
 pub mod list_workspaces;
 pub mod version;
 
@@ -11,6 +12,7 @@ pub mod version;
 enum Commands {
     Init(init::Init),
     Check(check::Check),
+    Link(link::Link),
 }
 
 #[derive(Parser)]
@@ -49,6 +51,7 @@ impl Cli {
         let result: LazinResult<()> = match cli.commands {
             Some(Commands::Init(cmd)) => cmd.init(),
             Some(Commands::Check(cmd)) => cmd.check(),
+            Some(Commands::Link(cmd)) => cmd.link(),
             None => Ok(()),
         };
 
@@ -60,6 +63,6 @@ fn handle_error<T>(result: LazinResult<T>) {
     // TODO: Better errors
     if let Err(e) = result {
         lazin_logger::error!(e);
-        common::exit_error()
+        exit_error!()
     }
 }

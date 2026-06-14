@@ -117,13 +117,10 @@ impl ModuleValidator {
         let mut errors = Vec::new();
         for (key, value) in module.values_pairs() {
             if let Err(validation_error) = Self::validate_source(key) {
-                errors.push(ModuleValidationError::new(
-                    module_name,
-                    module,
-                    key,
-                    value,
-                    validation_error,
-                ));
+                errors.push(
+                    ModuleValidationError::new(module_name, module, key, value, validation_error)
+                        .into(),
+                );
                 continue;
             }
         }
