@@ -1,15 +1,9 @@
-use std::{
-    fmt::Display,
-    path::Path,
-};
+use std::{fmt::Display, path::Path};
 
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
     files::SimpleFile,
-    term::{
-        self,
-        termcolor::Buffer,
-    },
+    term::{self, termcolor::Buffer},
 };
 
 use crate::common::Key;

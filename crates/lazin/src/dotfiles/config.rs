@@ -13,7 +13,7 @@ use crate::{
     error::{DuplicateKeysError, LazinError, LazinResult, TomlError},
 };
 
-type Entries = BTreeMap<Key, RawEntry>;
+type RawEntries = BTreeMap<Key, RawEntry>;
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
@@ -25,12 +25,15 @@ enum RawEntry {
 #[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(flatten)]
-    entries: Entries,
+    entries: RawEntries,
 }
 
 impl Config {
     pub fn parse(config_dir: &Path) -> LazinResult<Self> {
-        fn merge_entries(entries: &mut Entries, other: Entries) -> Result<(), DuplicateKeysError> {
+        fn merge_entries(
+            entries: &mut RawEntries,
+            other: RawEntries,
+        ) -> Result<(), DuplicateKeysError> {
             let mut duplicate_keys_errors = Vec::new();
 
             for (key, module) in other {
@@ -53,14 +56,14 @@ impl Config {
             Ok(())
         }
 
-        fn parse_entries(config_files: Vec<TomlFile>) -> LazinResult<Entries> {
+        fn parse_entries(config_files: Vec<TomlFile>) -> LazinResult<RawEntries> {
             let mut entries = BTreeMap::new();
             let mut file_data_buffer = String::new();
 
             for tomlfile in config_files {
                 file_data_buffer.clear();
                 File::open(&tomlfile.path)?.read_to_string(&mut file_data_buffer)?;
-                match toml::from_str::<Entries>(&file_data_buffer) {
+                match toml::from_str::<RawEntries>(&file_data_buffer) {
                     Ok(file_entires) => merge_entries(&mut entries, file_entires)?,
                     Err(e) => {
                         return Err(LazinError::from(TomlError {
@@ -76,9 +79,11 @@ impl Config {
         }
 
         let config_files = common::files(config_dir)?;
-        let entries = parse_entries(config_files)?;
+        let raw_entries = parse_entries(config_files)?;
 
-        Ok(Self { entries })
+        Ok(Self {
+            entries: raw_entries,
+        })
     }
 
     pub fn workspaces(&self) -> Vec<(&Key, &RawWorkspace)> {

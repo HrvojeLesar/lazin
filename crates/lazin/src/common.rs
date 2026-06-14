@@ -58,17 +58,13 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
 pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
     let directory = directory(config_directory);
 
-    // TODO: maybe make this block nicer
     match directory.try_exists() {
-        Ok(exists) => {
-            if !exists {
-                return Err(Error::directory_does_not_exist(directory));
-            }
+        Ok(true) => {}
+        Ok(false) => return Err(Error::directory_does_not_exist(directory)),
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            return Err(Error::directory_does_not_exist(directory));
         }
-        Err(e) => match e.kind() {
-            ErrorKind::NotFound => return Err(Error::directory_does_not_exist(directory)),
-            _ => return Err(e.into()),
-        },
+        Err(e) => return Err(e.into()),
     }
 
     Config::parse(directory)

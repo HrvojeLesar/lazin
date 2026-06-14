@@ -51,5 +51,14 @@ impl RawModule {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Modules(HashMap<Key, RawModule>);
+#[derive(Debug)]
+pub struct Module {
+    values: BTreeMap<Key, ModuleValue>,
+    encrypt: bool,
+}
+
+impl From<RawModule> for Module {
+    fn from(value: RawModule) -> Self {
+        todo!()
+    }
+}

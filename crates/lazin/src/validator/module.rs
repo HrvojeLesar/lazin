@@ -4,7 +4,7 @@ use lazin_pipeline::Bind;
 
 use crate::{
     common::Key,
-    dotfiles::module::{RawModule, ModuleValue},
+    dotfiles::module::{ModuleValue, RawModule},
 };
 
 type ValidationResult = Result<(), Validation>;

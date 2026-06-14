@@ -1,4 +1,3 @@
-
 use clap::{ArgAction, Parser, Subcommand};
 
 use crate::{common, error::LazinResult};

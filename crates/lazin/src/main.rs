@@ -5,7 +5,6 @@ mod common;
 mod diagnostics;
 mod dotfiles;
 mod error;
-mod link;
 mod validator;
 
 #[cfg(test)]
