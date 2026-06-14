@@ -4,24 +4,17 @@ use serde::Deserialize;
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
 pub struct RawWorkspace {
-    modules: Vec<Key>,
-}
-
-impl RawWorkspace {
-    pub fn modules(&self) -> &[Key] {
-        &self.modules
-    }
+    pub modules: Vec<Key>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Workspace {
-    modules: Vec<Key>,
+    pub name: Key,
+    pub modules: Vec<Key>,
 }
 
-impl From<RawWorkspace> for Workspace {
-    fn from(value: RawWorkspace) -> Self {
-        Self {
-            modules: value.modules,
-        }
+impl Workspace {
+    pub fn new(name: Key, modules: Vec<Key>) -> Self {
+        Self { name, modules }
     }
 }

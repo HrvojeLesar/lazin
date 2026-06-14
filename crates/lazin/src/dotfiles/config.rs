@@ -85,24 +85,4 @@ impl Config {
             entries: raw_entries,
         })
     }
-
-    pub fn workspaces(&self) -> Vec<(&Key, &RawWorkspace)> {
-        self.entries
-            .iter()
-            .filter_map(|entry| match entry.1 {
-                RawEntry::Workspace(w) => Some((entry.0, w)),
-                RawEntry::Module(_) => None,
-            })
-            .collect()
-    }
-
-    pub fn modules(&self) -> Vec<(&Key, &RawModule)> {
-        self.entries
-            .iter()
-            .filter_map(|entry| match entry.1 {
-                RawEntry::Workspace(_) => None,
-                RawEntry::Module(m) => Some((entry.0, m)),
-            })
-            .collect()
-    }
 }

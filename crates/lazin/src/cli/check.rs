@@ -17,8 +17,6 @@ impl Check {
     pub(crate) fn check(&self) -> LazinResult<()> {
         common::check(self.directory.as_deref())?;
 
-        todo!("Workspaces should check they have existing modules configured");
-
         Ok(())
     }
 }

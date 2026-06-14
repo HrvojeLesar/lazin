@@ -20,7 +20,7 @@ impl Link {
         let config = common::check(self.directory.as_deref())?;
         let workspace_name = Key::from(self.workspace.clone());
 
-        if !config.entries.contains_key(&workspace_name) {
+        if !config.workspaces.contains_key(&workspace_name) {
             exit_error!("Workspace '{}' not found", workspace_name)
         }
 

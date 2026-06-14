@@ -52,6 +52,7 @@ pub enum Error {
     DirectoryDoesNotExist(String),
     Custom(&'static str),
     InvalidModuleSources,
+    ModuleNotFound(String),
 }
 
 impl Error {
@@ -75,6 +76,9 @@ impl Display for Error {
             Error::Custom(c) => write!(f, "{}", c),
             Error::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
             Error::InvalidModuleSources => write!(f, "Invalid module sources"),
+            Error::ModuleNotFound(m) => {
+                write!(f, "Could not find a configured module named: '{}'", m)
+            }
         }
     }
 }

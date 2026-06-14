@@ -1,7 +1,6 @@
 use std::{
     collections::BTreeMap,
     fmt::Display,
-    fs,
     path::{Path, PathBuf},
 };
 
@@ -12,6 +11,7 @@ use crate::{
     dotfiles::{
         config::{Config, RawEntry},
         module::{Module, RawModule},
+        workspace::Workspace,
     },
     error::{LazinError, LazinResult},
 };
@@ -24,22 +24,34 @@ impl<T> Valid<T> {
 }
 
 pub enum ValidationError {
-    SourcePathDoesNotExist,
+    SourcePathDoesNotExist { module_name: Key, path: PathBuf },
 }
 
 impl Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValidationError::SourcePathDoesNotExist => write!(f, "source path not found"),
+            ValidationError::SourcePathDoesNotExist { module_name, path } => {
+                write!(
+                    f,
+                    "Module '{}' has a source path that could not be found: '{}'",
+                    module_name,
+                    path.display()
+                )
+            }
         }
     }
 }
 
 type SourceAndModulePairs<'a> = Vec<(&'a Key, &'a RawModule)>;
 
-struct ResolvedConfig;
+#[derive(Debug)]
+pub struct ResolvedConfig {
+    pub modules: BTreeMap<Key, Module>,
+    pub workspaces: BTreeMap<Key, Workspace>,
+}
+
 impl ResolvedConfig {
-    pub fn parse(config: &Config) -> LazinResult<Self> {
+    pub fn parse(config: Config) -> LazinResult<Self> {
         let source_and_module_pairs = config
             .entries
             .iter()
@@ -50,9 +62,32 @@ impl ResolvedConfig {
             .collect::<SourceAndModulePairs>();
 
         let validated_module_sources = validate_module_sources(source_and_module_pairs)?;
-        let expanded_modules = expand_modules(validated_module_sources)?;
+        let modules = expand_modules(validated_module_sources)?;
 
-        todo!()
+        let workspaces = config
+            .entries
+            .into_iter()
+            .filter_map(|(source, entry)| match entry {
+                RawEntry::Workspace(raw_workspace) => {
+                    Some(Workspace::new(source.clone(), raw_workspace.modules))
+                }
+                RawEntry::Module(_) => None,
+            })
+            .map(|workspace| {
+                workspace.modules.iter().try_for_each(|module_name| {
+                    match modules.contains_key(module_name) {
+                        true => Ok(()),
+                        false => Err(LazinError::ModuleNotFound(module_name.str().to_string())),
+                    }
+                })?;
+                Ok((workspace.name.clone(), workspace))
+            })
+            .collect::<LazinResult<BTreeMap<Key, Workspace>>>()?;
+
+        Ok(Self {
+            modules,
+            workspaces,
+        })
     }
 }
 
@@ -65,9 +100,12 @@ fn validate_module_sources(
         .map(|pair| {
             let source_path = Path::new(pair.0.str());
             lazin_pipeline::ValidationStep::new(source_path)
-                .bind(|path| match !path.exists() {
+                .bind(|path| match path.exists() {
                     true => Ok(()),
-                    false => Err(ValidationError::SourcePathDoesNotExist),
+                    false => Err(ValidationError::SourcePathDoesNotExist {
+                        module_name: pair.0.clone(),
+                        path: PathBuf::from(path),
+                    }),
                 })
                 .result()
         })
@@ -83,12 +121,15 @@ fn validate_module_sources(
     }
 }
 
-fn expand_modules(validated_module_sources: Valid<SourceAndModulePairs>) -> LazinResult<()> {
-    let f = validated_module_sources
+fn expand_modules(
+    validated_module_sources: Valid<SourceAndModulePairs>,
+) -> LazinResult<BTreeMap<Key, Module>> {
+    validated_module_sources
         .into_inner()
         .into_iter()
-        .map(|(module_name, raw_module)| Module::parse(module_name, raw_module))
-        .flatten();
-
-    Ok(())
+        .map(|(module_name, raw_module)| {
+            let module = Module::parse(module_name, raw_module)?;
+            Ok((module.name.clone(), module))
+        })
+        .collect()
 }

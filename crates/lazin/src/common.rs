@@ -8,9 +8,8 @@ use std::{
 };
 
 use crate::{
-    dotfiles::config::Config,
+    dotfiles::{config::Config, resolved_config::ResolvedConfig},
     error::{Error, LazinResult},
-    validator::module::{ModuleValidationError, ModuleValidator},
 };
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
@@ -68,7 +67,7 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     Ok(files)
 }
 
-pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
+pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig> {
     let directory = directory(config_directory);
 
     match directory.try_exists() {
@@ -80,29 +79,9 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<Config> {
         Err(e) => return Err(e.into()),
     }
 
-    Config::parse(directory)
-}
+    let config = Config::parse(directory)?;
 
-pub fn validate_config(config: &Config) -> Vec<ModuleValidationError<'_>> {
-    let modules = config.modules();
-    let mut validation_errors = Vec::new();
-    for (module_name, module) in modules {
-        validation_errors.extend(ModuleValidator::validate(module_name, module));
-    }
-
-    validation_errors
-}
-
-pub fn report_validation_errors(mut errors: Vec<ModuleValidationError>) {
-    errors.sort_by(|validation_a, validation_b| validation_a.key.cmp(validation_b.key));
-    errors.iter().for_each(|err| {
-        lazin_logger::error!(
-            "Module '{}' path '{}': {}",
-            err.module_name.str(),
-            err.key.str(),
-            err.validation
-        );
-    });
+    ResolvedConfig::parse(config)
 }
 
 #[inline]
@@ -130,15 +109,11 @@ macro_rules! exit_error {
 pub fn exit_error_with_code(code: i32) -> ! {
     exit(code)
 }
-pub fn check(config_directory: Option<&Path>) -> LazinResult<Config> {
+
+pub fn check(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig> {
     let config = parse_config(config_directory)?;
 
-    let validation_errors = validate_config(&config);
-
-    if !validation_errors.is_empty() {
-        report_validation_errors(validation_errors);
-        exit_error!()
-    }
+    dbg!(&config);
 
     Ok(config)
 }

@@ -1,7 +1,7 @@
 use crate::{common::Key, error::LazinResult};
 use serde::Deserialize;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -56,12 +56,13 @@ impl RawModule {
 
 #[derive(Debug)]
 pub struct Module {
-    name: Key,
-    values: BTreeMap<PathBuf, PathBuf>,
-    encrypt: bool,
+    pub name: Key,
+    pub values: BTreeMap<PathBuf, PathBuf>,
+    pub encrypt: bool,
 }
 
 impl Module {
+    // TODO: support encryption
     pub fn parse(name: &Key, raw_module: &RawModule) -> LazinResult<Self> {
         let mut values = BTreeMap::new();
         for (source, target) in &raw_module.values {
@@ -79,18 +80,21 @@ impl Module {
 }
 
 fn expand_directory(source: &Path, target: &Path) -> LazinResult<FileSourceTargetPairs> {
-    if !source.is_dir() {
-        let pairs = FileSourceTargetPairs::from([(source.into(), target.into())]);
-        Ok(pairs)
-    } else {
-        let expanded = fs::read_dir(source)?
-            .map(|child| -> LazinResult<FileSourceTargetPairs> {
+    fn walk(source: &Path, target: &Path, out: &mut FileSourceTargetPairs) -> LazinResult<()> {
+        if !source.is_dir() {
+            out.insert(source.into(), target.into());
+        } else {
+            for child in fs::read_dir(source)? {
                 let child = child?.file_name();
-                let child_source = PathBuf::from(source).join(&child);
-                let child_target = PathBuf::from(target).join(&child);
-                expand_directory(&child_source, &child_target)
-            })
-            .collect::<LazinResult<Vec<FileSourceTargetPairs>>>()?; // Use transposition of Iterator<Result<T,E>> -> Result<Sequence<T>, E>
-        Ok(expanded.into_iter().flatten().collect())
+                let child_source = source.join(&child);
+                let child_target = target.join(&child);
+                walk(&child_source, &child_target, out)?;
+            }
+        }
+        Ok(())
     }
+
+    let mut pairs = FileSourceTargetPairs::new();
+    walk(source, target, &mut pairs)?;
+    Ok(pairs)
 }
