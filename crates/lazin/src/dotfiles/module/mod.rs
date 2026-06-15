@@ -2,6 +2,7 @@ use crate::{common::Key, error::LazinResult};
 use serde::Deserialize;
 use std::{
     collections::BTreeMap,
+    fmt::Display,
     fs,
     path::{Path, PathBuf},
 };
@@ -40,6 +41,24 @@ impl ModuleValue {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ModuleName(pub Key);
+
+impl Display for ModuleName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ModuleSourcePath(pub Key);
+
+impl Display for ModuleSourcePath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct RawModule {
     #[serde(flatten)]
@@ -54,7 +73,7 @@ impl RawModule {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Module {
     pub name: Key,
     pub values: BTreeMap<PathBuf, PathBuf>,

@@ -6,7 +6,7 @@ use codespan_reporting::{
     term::{self, termcolor::Buffer},
 };
 
-use crate::common::Key;
+use crate::{common::Key, dotfiles::workspace::Workspace};
 
 pub type DuplicateKeys = Vec<Key>;
 
@@ -53,6 +53,7 @@ pub enum Error {
     Custom(&'static str),
     InvalidModuleSources,
     ModuleNotFound(String),
+    WorkspaceNotFound(Key),
 }
 
 impl Error {
@@ -78,6 +79,9 @@ impl Display for Error {
             Error::InvalidModuleSources => write!(f, "Invalid module sources"),
             Error::ModuleNotFound(m) => {
                 write!(f, "Could not find a configured module named: '{}'", m)
+            }
+            Error::WorkspaceNotFound(workspace) => {
+                write!(f, "Could not find workspace: '{}'", workspace)
             }
         }
     }

@@ -89,6 +89,22 @@ impl ResolvedConfig {
             workspaces,
         })
     }
+
+    pub fn get_modules_from_workspace_key(&self, workspace_key: &Key) -> LazinResult<Vec<Module>> {
+        let workspace = self
+            .workspaces
+            .get(workspace_key)
+            .ok_or(LazinError::WorkspaceNotFound(workspace_key.clone()))?;
+
+        Ok(self
+            .modules
+            .iter()
+            .filter_map(|(k, m)| match workspace.modules.contains(k) {
+                true => Some(m.clone()),
+                false => None,
+            })
+            .collect())
+    }
 }
 
 fn validate_module_sources(
