@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{borrow::Borrow, fmt::Display, ops::Deref};
 
 use crate::common::Key;
 use serde::Deserialize;
@@ -9,7 +9,7 @@ pub struct RawWorkspace {
     pub modules: Vec<Key>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WorkspaceName(pub Key);
 
 impl Display for WorkspaceName {
@@ -18,14 +18,29 @@ impl Display for WorkspaceName {
     }
 }
 
+impl Borrow<Key> for WorkspaceName {
+    fn borrow(&self) -> &Key {
+        &self.0
+    }
+}
+
+impl AsRef<Key> for WorkspaceName {
+    fn as_ref(&self) -> &Key {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Workspace {
-    pub name: Key,
+    pub name: WorkspaceName,
     pub modules: Vec<Key>,
 }
 
 impl Workspace {
     pub fn new(name: Key, modules: Vec<Key>) -> Self {
-        Self { name, modules }
+        Self {
+            name: WorkspaceName(name),
+            modules,
+        }
     }
 }

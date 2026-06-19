@@ -12,7 +12,8 @@ pub fn list_workspaces(config_directory: Option<&Path>) -> LazinResult<()> {
 
     lazin_logger::info!("Configured workspaces:");
     for (idx, (workspace_name, _)) in workspaces.iter().enumerate() {
-        lazin_logger::print!("{}. {}", idx + 1, workspace_name.str())
+        let enumerator = idx + 1;
+        lazin_logger::print!("{}. {}", enumerator, workspace_name.as_ref())
     }
 
     Ok(())

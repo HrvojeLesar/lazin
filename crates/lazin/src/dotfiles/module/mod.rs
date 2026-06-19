@@ -1,9 +1,11 @@
 use crate::{common::Key, error::LazinResult};
 use serde::Deserialize;
 use std::{
+    borrow::Borrow,
     collections::BTreeMap,
     fmt::Display,
     fs,
+    ops::Deref,
     path::{Path, PathBuf},
 };
 
@@ -41,7 +43,7 @@ impl ModuleValue {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ModuleName(pub Key);
 
 impl Display for ModuleName {
@@ -50,7 +52,19 @@ impl Display for ModuleName {
     }
 }
 
-#[derive(Clone, Debug)]
+impl Borrow<Key> for ModuleName {
+    fn borrow(&self) -> &Key {
+        &self.0
+    }
+}
+
+impl AsRef<Key> for ModuleName {
+    fn as_ref(&self) -> &Key {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ModuleSourcePath(pub Key);
 
 impl Display for ModuleSourcePath {
@@ -62,20 +76,14 @@ impl Display for ModuleSourcePath {
 #[derive(Debug, Deserialize)]
 pub struct RawModule {
     #[serde(flatten)]
-    values: BTreeMap<Key, ModuleValue>,
+    pub values: BTreeMap<ModuleSourcePath, ModuleValue>,
     #[serde(default)]
-    encrypt: bool,
-}
-
-impl RawModule {
-    pub fn values_pairs(&self) -> impl Iterator<Item = (&Key, &ModuleValue)> {
-        self.values.iter()
-    }
+    pub encrypt: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct Module {
-    pub name: Key,
+    pub name: ModuleName,
     pub values: BTreeMap<PathBuf, PathBuf>,
     pub encrypt: bool,
 }
@@ -85,13 +93,13 @@ impl Module {
     pub fn parse(name: &Key, raw_module: &RawModule) -> LazinResult<Self> {
         let mut values = BTreeMap::new();
         for (source, target) in &raw_module.values {
-            let source = Path::new(source.str());
+            let source = Path::new(source.0.str());
             let expanded = expand_directory(source, target.path())?;
             values.extend(expanded);
         }
 
         Ok(Self {
-            name: name.clone(),
+            name: ModuleName(name.clone()),
             values,
             encrypt: raw_module.encrypt,
         })

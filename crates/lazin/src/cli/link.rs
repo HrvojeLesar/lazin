@@ -4,6 +4,7 @@ use clap::Args;
 
 use crate::{
     common::{self, Key},
+    dotfiles::filesystem::link::{DryRunLinker, Linker},
     error::LazinResult,
     exit_error,
 };
@@ -23,6 +24,9 @@ impl Link {
         if !config.workspaces.contains_key(&workspace_name) {
             exit_error!("Workspace '{}' not found", workspace_name)
         }
+
+        let mut linker = DryRunLinker::new(config);
+        linker.link(&workspace_name)?;
 
         todo!("workspace logic")
     }

@@ -10,8 +10,8 @@ use crate::{
     common::Key,
     dotfiles::{
         config::{Config, RawEntry},
-        module::{Module, RawModule},
-        workspace::Workspace,
+        module::{Module, ModuleName, RawModule},
+        workspace::{Workspace, WorkspaceName},
     },
     error::{LazinError, LazinResult},
 };
@@ -42,12 +42,12 @@ impl Display for ValidationError {
     }
 }
 
-type SourceAndModulePairs<'a> = Vec<(&'a Key, &'a RawModule)>;
+type ModuleNameAndRawModule<'a> = Vec<(&'a Key, &'a RawModule)>;
 
 #[derive(Debug)]
 pub struct ResolvedConfig {
-    pub modules: BTreeMap<Key, Module>,
-    pub workspaces: BTreeMap<Key, Workspace>,
+    pub modules: BTreeMap<ModuleName, Module>,
+    pub workspaces: BTreeMap<WorkspaceName, Workspace>,
 }
 
 impl ResolvedConfig {
@@ -59,7 +59,7 @@ impl ResolvedConfig {
                 RawEntry::Workspace(_) => None,
                 RawEntry::Module(raw_module) => Some((source, raw_module)),
             })
-            .collect::<SourceAndModulePairs>();
+            .collect::<ModuleNameAndRawModule>();
 
         let validated_module_sources = validate_module_sources(source_and_module_pairs)?;
         let modules = expand_modules(validated_module_sources)?;
@@ -73,16 +73,19 @@ impl ResolvedConfig {
                 }
                 RawEntry::Module(_) => None,
             })
-            .map(|workspace| {
+            .map(|workspace| -> LazinResult<(WorkspaceName, Workspace)> {
                 workspace.modules.iter().try_for_each(|module_name| {
                     match modules.contains_key(module_name) {
                         true => Ok(()),
-                        false => Err(LazinError::ModuleNotFound(module_name.str().to_string())),
+                        false => Err(LazinError::ModuleNotFound(
+                            workspace.name.clone(),
+                            ModuleName(module_name.clone()),
+                        )),
                     }
                 })?;
                 Ok((workspace.name.clone(), workspace))
             })
-            .collect::<LazinResult<BTreeMap<Key, Workspace>>>()?;
+            .collect::<LazinResult<BTreeMap<WorkspaceName, Workspace>>>()?;
 
         Ok(Self {
             modules,
@@ -99,7 +102,7 @@ impl ResolvedConfig {
         Ok(self
             .modules
             .iter()
-            .filter_map(|(k, m)| match workspace.modules.contains(k) {
+            .filter_map(|(k, m)| match workspace.modules.contains(k.as_ref()) {
                 true => Some(m.clone()),
                 false => None,
             })
@@ -108,38 +111,46 @@ impl ResolvedConfig {
 }
 
 fn validate_module_sources(
-    pairs: SourceAndModulePairs,
-) -> LazinResult<Valid<SourceAndModulePairs>> {
+    pairs: ModuleNameAndRawModule,
+) -> LazinResult<Valid<ModuleNameAndRawModule>> {
     let valid = true;
-    match pairs
-        .iter()
-        .map(|pair| {
-            let source_path = Path::new(pair.0.str());
-            lazin_pipeline::ValidationStep::new(source_path)
-                .bind(|path| match path.exists() {
-                    true => Ok(()),
-                    false => Err(ValidationError::SourcePathDoesNotExist {
-                        module_name: pair.0.clone(),
-                        path: PathBuf::from(path),
-                    }),
-                })
-                .result()
-        })
-        .fold(valid, |acc, result| match result {
-            Ok(_) => acc,
-            Err(e) => {
-                lazin_logger::error!(e);
-                false
-            }
-        }) {
-        true => Ok(Valid(pairs)),
-        false => Err(LazinError::InvalidModuleSources),
-    }
+    pairs.iter().try_for_each(|pair| {
+        match pair
+            .1
+            .values
+            .keys()
+            .map(|source_path| {
+                lazin_pipeline::ValidationStep::new(source_path)
+                    .bind(|path| {
+                        let path = Path::new(path.0.str());
+                        match path.exists() {
+                            true => Ok(()),
+                            false => Err(ValidationError::SourcePathDoesNotExist {
+                                module_name: pair.0.clone(),
+                                path: path.into(),
+                            }),
+                        }
+                    })
+                    .result()
+            })
+            .fold(valid, |acc, result| match result {
+                Ok(_) => acc,
+                Err(e) => {
+                    lazin_logger::error!(e);
+                    false
+                }
+            }) {
+            true => Ok(()),
+            false => Err(LazinError::InvalidModuleSources),
+        }
+    })?;
+
+    Ok(Valid(pairs))
 }
 
 fn expand_modules(
-    validated_module_sources: Valid<SourceAndModulePairs>,
-) -> LazinResult<BTreeMap<Key, Module>> {
+    validated_module_sources: Valid<ModuleNameAndRawModule>,
+) -> LazinResult<BTreeMap<ModuleName, Module>> {
     validated_module_sources
         .into_inner()
         .into_iter()

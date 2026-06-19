@@ -6,7 +6,13 @@ use codespan_reporting::{
     term::{self, termcolor::Buffer},
 };
 
-use crate::{common::Key, dotfiles::workspace::Workspace};
+use crate::{
+    common::Key,
+    dotfiles::{
+        module::ModuleName,
+        workspace::{Workspace, WorkspaceName},
+    },
+};
 
 pub type DuplicateKeys = Vec<Key>;
 
@@ -52,7 +58,7 @@ pub enum Error {
     DirectoryDoesNotExist(String),
     Custom(&'static str),
     InvalidModuleSources,
-    ModuleNotFound(String),
+    ModuleNotFound(WorkspaceName, ModuleName),
     WorkspaceNotFound(Key),
 }
 
@@ -77,8 +83,13 @@ impl Display for Error {
             Error::Custom(c) => write!(f, "{}", c),
             Error::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
             Error::InvalidModuleSources => write!(f, "Invalid module sources"),
-            Error::ModuleNotFound(m) => {
-                write!(f, "Could not find a configured module named: '{}'", m)
+            Error::ModuleNotFound(w, m) => {
+                write!(
+                    f,
+                    "Workspace '{}' contains an unconfigured module '{}'",
+                    w.as_ref(),
+                    m.as_ref(),
+                )
             }
             Error::WorkspaceNotFound(workspace) => {
                 write!(f, "Could not find workspace: '{}'", workspace)
