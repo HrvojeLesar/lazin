@@ -14,6 +14,8 @@ pub(super) struct Link {
     workspace: String,
     #[arg(short = 'd', long = "directory", help = "directory to validate")]
     directory: Option<PathBuf>,
+    #[arg(short = 'l', long = "link", help = "actually link")]
+    link: bool,
 }
 
 impl Link {
@@ -25,9 +27,19 @@ impl Link {
             exit_error!("Workspace '{}' not found", workspace_name)
         }
 
-        let mut linker = DryRunLinker::new(config);
-        linker.link(&workspace_name)?;
+        if !self.link {
+            let mut linker = DryRunLinker::new(config);
+            linker.link(&workspace_name)?;
+        } else {
+            #[cfg(unix)]
+            {
+                use crate::dotfiles::filesystem::link::UnixFSLinker;
 
-        todo!("workspace logic")
+                let mut linker = UnixFSLinker::new(config);
+                linker.link(&workspace_name)?;
+            }
+        }
+
+        Ok(())
     }
 }

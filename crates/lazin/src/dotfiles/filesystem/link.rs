@@ -1,4 +1,3 @@
-#[cfg(unix)]
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
@@ -21,16 +20,109 @@ pub enum PathComparison {
     TargetAndSourceAlreadyLinked,
     TargetIsAnExistingFile,
     TargetIsAnExistingDirectory,
+    Unknown,
 }
 
 pub trait Linker {
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()>;
     fn create_dir_all(&mut self, path: &Path) -> LazinResult<()>;
-    fn compare_symlink(&self, source: &Path, target: &Path) -> LazinResult<PathComparison>;
+    fn compare_symlink(&self, source: &Path, target: &Path) -> LazinResult<PathComparison> {
+        if !target.exists() {
+            return Ok(PathComparison::TargetLinkMissing);
+        }
+
+        //TODO:  Handle case where source and target are the exact same file
+        if fs::canonicalize(source)? == fs::canonicalize(target)? {
+            return Ok(PathComparison::TargetAndSourceAlreadyLinked);
+        }
+
+        if target.is_file() {
+            return Ok(PathComparison::TargetIsAnExistingFile);
+        }
+
+        if target.is_dir() {
+            return Ok(PathComparison::TargetIsAnExistingDirectory);
+        }
+
+        Ok(PathComparison::Unknown)
+    }
     fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()>;
 }
 
-struct FSLinker {}
+#[cfg(unix)]
+pub struct UnixFSLinker {
+    config: ResolvedConfig,
+}
+impl UnixFSLinker {
+    pub(crate) fn new(config: ResolvedConfig) -> Self {
+        Self { config }
+    }
+}
+
+#[cfg(unix)]
+impl Linker for UnixFSLinker {
+    // TODO: duplicate from dry run linker
+    fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
+        let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
+
+        for module in &modules {
+            for module_value in &module.values {
+                let source = module_value.source.as_path();
+                let target = module_value.target.as_path();
+                self.create_dir_all(target)?;
+                match self.compare_symlink(source, target)? {
+                    PathComparison::TargetLinkMissing => self.symlink(source, target)?,
+                    PathComparison::TargetAndSourceAlreadyLinked => {
+                        lazin_logger::warn!(
+                            "Skipping linking {} -> {} - target is already linked",
+                            source.display(),
+                            target.display()
+                        )
+                    }
+                    PathComparison::TargetIsAnExistingFile => {
+                        lazin_logger::warn!(
+                            "Skipping linking {} -> {} - target is an existing file",
+                            source.display(),
+                            target.display()
+                        )
+                    }
+                    PathComparison::TargetIsAnExistingDirectory => {
+                        lazin_logger::warn!(
+                            "Skipping linking {} -> {} - target is an existing directory",
+                            source.display(),
+                            target.display()
+                        )
+                    }
+                    PathComparison::Unknown => {
+                        lazin_logger::error!(
+                            "Skipping linking {} -> {} - unknown path comparison; this is a bug and this case should be handled",
+                            source.display(),
+                            target.display()
+                        )
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn create_dir_all(&mut self, path: &Path) -> LazinResult<()> {
+        // TODO: Log creating directories
+        create_parent_directories(path)
+    }
+
+    fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {
+        use std::os::unix::fs::symlink;
+
+        symlink(source, target)?;
+        copy_permissions(source, target)?;
+
+        lazin_logger::info!("Linking {} -> {}", source.display(), target.display());
+
+        Ok(())
+    }
+}
 
 pub struct DryRunLinker {
     config: ResolvedConfig,
@@ -47,6 +139,7 @@ impl DryRunLinker {
 }
 
 impl Linker for DryRunLinker {
+    // TODO: duplicate
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
         let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
 
@@ -55,8 +148,7 @@ impl Linker for DryRunLinker {
                 let source = module_value.source.as_path();
                 let target = module_value.target.as_path();
                 self.create_dir_all(target)?;
-                let comparison = self.compare_symlink(source, target)?;
-                match comparison {
+                match self.compare_symlink(source, target)? {
                     PathComparison::TargetLinkMissing => self.symlink(source, target)?,
                     PathComparison::TargetAndSourceAlreadyLinked => self.symlink(source, target)?,
                     PathComparison::TargetIsAnExistingFile => {
@@ -69,6 +161,13 @@ impl Linker for DryRunLinker {
                     PathComparison::TargetIsAnExistingDirectory => {
                         lazin_logger::warn!(
                             "Skipping linking {} -> {} - target is an existing directory",
+                            source.display(),
+                            target.display()
+                        )
+                    }
+                    PathComparison::Unknown => {
+                        lazin_logger::error!(
+                            "Skipping linking {} -> {} - unknown path comparison; this is a bug and this case should be handled",
                             source.display(),
                             target.display()
                         )
@@ -95,27 +194,6 @@ impl Linker for DryRunLinker {
         }
 
         Ok(())
-    }
-
-    fn compare_symlink(&self, source: &Path, target: &Path) -> LazinResult<PathComparison> {
-        if !target.exists() {
-            return Ok(PathComparison::TargetLinkMissing);
-        }
-
-        if fs::canonicalize(source)? == fs::canonicalize(target)? {
-            todo!("Handle case where source and target are the exact same file");
-            return Ok(PathComparison::TargetAndSourceAlreadyLinked);
-        }
-
-        if target.is_file() {
-            return Ok(PathComparison::TargetIsAnExistingFile);
-        }
-
-        if target.is_dir() {
-            return Ok(PathComparison::TargetIsAnExistingDirectory);
-        }
-
-        unreachable!("Cover all symlink comparison cases dummy");
     }
 
     fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {

@@ -113,7 +113,5 @@ pub fn exit_error_with_code(code: i32) -> ! {
 pub fn check(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig> {
     let config = parse_config(config_directory)?;
 
-    dbg!(&config);
-
     Ok(config)
 }

@@ -8,10 +8,7 @@ use codespan_reporting::{
 
 use crate::{
     common::Key,
-    dotfiles::{
-        module::ModuleName,
-        workspace::WorkspaceName,
-    },
+    dotfiles::{module::ModuleName, workspace::WorkspaceName},
 };
 
 pub type DuplicateKeys = Vec<Key>;
@@ -68,6 +65,7 @@ impl Error {
     }
 }
 
+// TODO: Better display for results
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
