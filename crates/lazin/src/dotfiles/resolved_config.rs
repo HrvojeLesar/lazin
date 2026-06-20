@@ -10,7 +10,7 @@ use crate::{
     common::Key,
     dotfiles::{
         config::{Config, RawEntry},
-        module::{Module, ModuleName, RawModule},
+        module::{Module, ModuleName, config::ModuleConfig},
         workspace::{Workspace, WorkspaceName},
     },
     error::{LazinError, LazinResult},
@@ -42,7 +42,7 @@ impl Display for ValidationError {
     }
 }
 
-type ModuleNameAndRawModule<'a> = Vec<(&'a Key, &'a RawModule)>;
+type ModuleNameAndRawModule<'a> = Vec<(&'a Key, &'a ModuleConfig)>;
 
 #[derive(Debug)]
 pub struct ResolvedConfig {

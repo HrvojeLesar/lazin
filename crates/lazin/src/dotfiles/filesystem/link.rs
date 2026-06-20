@@ -1,13 +1,10 @@
 #[cfg(unix)]
 use std::path::Path;
-use std::{collections::BTreeMap, fs, os::unix::fs::symlink, path::PathBuf};
+use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use crate::{
     common::Key,
-    dotfiles::{
-        resolved_config::ResolvedConfig,
-        workspace::{self, Workspace},
-    },
+    dotfiles::resolved_config::ResolvedConfig,
     error::{LazinError, LazinResult},
 };
 
@@ -54,7 +51,9 @@ impl Linker for DryRunLinker {
         let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
 
         for module in &modules {
-            for (source, target) in &module.values {
+            for module_value in &module.values {
+                let source = module_value.source.as_path();
+                let target = module_value.target.as_path();
                 self.create_dir_all(target)?;
                 let comparison = self.compare_symlink(source, target)?;
                 match comparison {
@@ -104,6 +103,7 @@ impl Linker for DryRunLinker {
         }
 
         if fs::canonicalize(source)? == fs::canonicalize(target)? {
+            todo!("Handle case where source and target are the exact same file");
             return Ok(PathComparison::TargetAndSourceAlreadyLinked);
         }
 

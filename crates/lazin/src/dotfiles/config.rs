@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::{
     common::{self, Key, TomlFile},
-    dotfiles::{module::RawModule, workspace::RawWorkspace},
+    dotfiles::{module::config::ModuleConfig, workspace::RawWorkspace},
     error::{DuplicateKeysError, LazinError, LazinResult, TomlError},
 };
 
@@ -19,7 +19,7 @@ type RawEntries = BTreeMap<Key, RawEntry>;
 #[serde(untagged)]
 pub enum RawEntry {
     Workspace(RawWorkspace),
-    Module(RawModule),
+    Module(ModuleConfig),
 }
 
 #[derive(Debug, Deserialize)]

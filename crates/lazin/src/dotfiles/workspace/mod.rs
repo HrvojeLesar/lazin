@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt::Display, ops::Deref};
+use std::{borrow::Borrow, fmt::Display};
 
 use crate::common::Key;
 use serde::Deserialize;

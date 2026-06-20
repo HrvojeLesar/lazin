@@ -10,7 +10,7 @@ use crate::{
     common::Key,
     dotfiles::{
         module::ModuleName,
-        workspace::{Workspace, WorkspaceName},
+        workspace::WorkspaceName,
     },
 };
 
