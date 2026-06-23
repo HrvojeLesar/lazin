@@ -120,7 +120,7 @@ fn validate_module_sources(
             .values
             .keys()
             .map(|source_path| {
-                lazin_pipeline::ValidationStep::new(source_path)
+                lazin_pipeline::new(source_path)
                     .bind(|path| {
                         let path = Path::new(path.0.str());
                         match path.exists() {
