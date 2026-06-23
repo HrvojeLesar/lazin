@@ -62,7 +62,10 @@ impl Config {
 
             for tomlfile in config_files {
                 file_data_buffer.clear();
-                File::open(&tomlfile.path)?.read_to_string(&mut file_data_buffer)?;
+                File::open(&tomlfile.path)
+                    .map_err(|e| LazinError::IoExt("File error", e))?
+                    .read_to_string(&mut file_data_buffer)
+                    .map_err(|e| LazinError::IoExt("File read to string error", e))?;
                 match toml::from_str::<RawEntries>(&file_data_buffer) {
                     Ok(file_entires) => merge_entries(&mut entries, file_entires)?,
                     Err(e) => {

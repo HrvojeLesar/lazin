@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     dotfiles::{config::Config, resolved_config::ResolvedConfig},
-    error::{Error, LazinResult},
+    error::{Error, LazinError, LazinResult},
 };
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
@@ -53,8 +53,10 @@ pub fn directory(path: Option<&Path>) -> &Path {
 pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     let mut files = Vec::new();
 
-    for entry in fs::read_dir(directory).map_err(Error::from)? {
-        let entry = entry.map_err(Error::from)?;
+    for entry in
+        fs::read_dir(directory).map_err(|e| LazinError::IoExt("Failed to read directory", e))?
+    {
+        let entry = entry.map_err(|e| LazinError::IoExt("Faield to read directory entry", e))?;
         let path = entry.path();
 
         if path.extension().is_some_and(|ext| ext == "toml")
@@ -76,7 +78,7 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConf
         Err(e) if e.kind() == ErrorKind::NotFound => {
             return Err(Error::directory_does_not_exist(directory));
         }
-        Err(e) => return Err(e.into()),
+        Err(e) => return Err(LazinError::IoExt("Failed to check if directory exists", e)),
     }
 
     let config = Config::parse(directory)?;

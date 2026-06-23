@@ -1,3 +1,4 @@
+use std::io::ErrorKind;
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
@@ -26,13 +27,22 @@ pub enum PathComparison {
 pub trait Linker {
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()>;
     fn create_dir_all(&mut self, path: &Path) -> LazinResult<()>;
+
+    // TODO: Fix failures on invalid symlinks
     fn compare_symlink(&self, source: &Path, target: &Path) -> LazinResult<PathComparison> {
-        if !target.exists() {
-            return Ok(PathComparison::TargetLinkMissing);
+        match target.try_exists() {
+            Ok(true) => (),
+            Ok(false) => return Ok(PathComparison::TargetLinkMissing),
+            Err(e) => return Err(LazinError::IoExt("Failed to check if target exists", e)),
         }
 
+        let canonicalized_source = fs::canonicalize(source)
+            .map_err(|e| LazinError::IoExt("Failed to canonicalize source", e))?;
+        let canonicalized_target = fs::canonicalize(target)
+            .map_err(|e| LazinError::IoExt("Failed to canonicalize target", e))?;
+
         //TODO:  Handle case where source and target are the exact same file
-        if fs::canonicalize(source)? == fs::canonicalize(target)? {
+        if canonicalized_source == canonicalized_target {
             return Ok(PathComparison::TargetAndSourceAlreadyLinked);
         }
 
@@ -108,17 +118,22 @@ impl Linker for UnixFSLinker {
     }
 
     fn create_dir_all(&mut self, path: &Path) -> LazinResult<()> {
-        // TODO: Log creating directories
         create_parent_directories(path)
     }
 
     fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {
         use std::os::unix::fs::symlink;
 
-        symlink(source, target)?;
-        copy_permissions(source, target)?;
+        let abolute_source = fs::canonicalize(source)
+            .map_err(|e| LazinError::IoExt("failed to get absolute path for source", e))?;
 
-        lazin_logger::info!("Linking {} -> {}", source.display(), target.display());
+        lazin_logger::info!(
+            "Linking {} -> {}",
+            abolute_source.display(),
+            target.display()
+        );
+        symlink(abolute_source, target).map_err(|e| LazinError::IoExt("Failed to symlink", e))?;
+        copy_permissions(source, target)?;
 
         Ok(())
     }
@@ -208,15 +223,22 @@ impl Linker for DryRunLinker {
 fn copy_permissions(source: &Path, target: &Path) -> LazinResult<()> {
     use std::fs;
 
-    let source_permissions = fs::metadata(source)?.permissions();
-    fs::set_permissions(target, source_permissions)?;
+    let source_permissions = fs::metadata(source)
+        .map_err(|e| LazinError::IoExt("Faild to get source metadata", e))?
+        .permissions();
+    fs::set_permissions(target, source_permissions)
+        .map_err(|e| LazinError::IoExt("Failed to set permissions", e))?;
 
     Ok(())
 }
 
 fn create_parent_directories(target: &Path) -> LazinResult<()> {
-    if let Some(parent_dir) = target.parent() {
-        fs::create_dir_all(parent_dir)?;
+    if let Some(parent_dir) = target.parent()
+        && !parent_dir.exists()
+    {
+        fs::create_dir_all(parent_dir)
+            .map_err(|e| LazinError::IoExt("Failed to create directories", e))?;
+        lazin_logger::info!("Creating directory: {}", parent_dir.display());
     }
 
     Ok(())

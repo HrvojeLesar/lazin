@@ -51,6 +51,7 @@ impl Display for TomlError {
 pub enum Error {
     Toml(Box<TomlError>),
     Io(std::io::Error),
+    IoExt(&'static str, std::io::Error),
     DuplicateKeys(DuplicateKeys),
     DirectoryDoesNotExist(String),
     Custom(&'static str),
@@ -69,8 +70,9 @@ impl Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Toml(error) => error.fmt(f),
-            Error::Io(error) => error.fmt(f),
+            Error::Toml(error) => write!(f, "Toml error: {}", error),
+            Error::Io(error) => write!(f, "Io error: {}", error),
+            Error::IoExt(message, error) => write!(f, "{}: {}", message, error),
             Error::DuplicateKeys(error) => {
                 write!(
                     f,
@@ -99,12 +101,6 @@ impl Display for Error {
 impl From<TomlError> for Error {
     fn from(value: TomlError) -> Self {
         Self::Toml(Box::new(value))
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(value: std::io::Error) -> Self {
-        Self::Io(value)
     }
 }
 
