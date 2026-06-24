@@ -2,7 +2,6 @@ use crate::cli::Cli;
 
 mod cli;
 mod common;
-mod diagnostics;
 mod dotfiles;
 mod error;
 

@@ -17,7 +17,7 @@ pub struct DuplicateKeysError {
     pub duplicates: DuplicateKeys,
 }
 
-pub type LazinResult<T, C: Display = &'static str> = Result<T, LazinContextError<C>>;
+pub type LazinResult<T, C = &'static str> = Result<T, LazinContextError<C>>;
 
 #[derive(Debug)]
 pub struct TomlError {
@@ -56,6 +56,7 @@ pub enum LazinError {
     InvalidModuleSources,
     ModuleNotFound(WorkspaceName, ModuleName),
     WorkspaceNotFound(Key),
+    StripPrefix(std::path::StripPrefixError),
 }
 
 impl LazinError {
@@ -91,6 +92,9 @@ impl Display for LazinError {
             LazinError::WorkspaceNotFound(workspace) => {
                 write!(f, "Could not find workspace: '{}'", workspace)
             }
+            LazinError::StripPrefix(strip_prefix_error) => {
+                write!(f, "Failed to strip prefix: {}", strip_prefix_error)
+            }
         }
     }
 }
@@ -120,6 +124,12 @@ impl From<Vec<DuplicateKeysError>> for LazinError {
 impl From<std::io::Error> for LazinError {
     fn from(value: std::io::Error) -> Self {
         Self::Io(value)
+    }
+}
+
+impl From<std::path::StripPrefixError> for LazinError {
+    fn from(value: std::path::StripPrefixError) -> Self {
+        Self::StripPrefix(value)
     }
 }
 

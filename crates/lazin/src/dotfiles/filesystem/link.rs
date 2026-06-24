@@ -1,7 +1,7 @@
-use std::io::ErrorKind;
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
+use crate::dotfiles::module::Module;
 use crate::error::Context;
 use crate::{
     common::Key,
@@ -10,9 +10,9 @@ use crate::{
 };
 
 enum FileType {
-    Link(PathBuf),
-    File,
+    Link,
     Directory,
+    File,
     Override,
     Missing,
 }
@@ -76,44 +76,7 @@ impl Linker for UnixFSLinker {
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
         let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
 
-        for module in &modules {
-            for module_value in &module.values {
-                let source = module_value.source.as_path();
-                let target = module_value.target.as_path();
-                self.create_dir_all(target)?;
-                match self.compare_symlink(source, target)? {
-                    PathComparison::TargetLinkMissing => self.symlink(source, target)?,
-                    PathComparison::TargetAndSourceAlreadyLinked => {
-                        lazin_logger::warn!(
-                            "Skipping linking {} -> {} - target is already linked",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                    PathComparison::TargetIsAnExistingFile => {
-                        lazin_logger::warn!(
-                            "Skipping linking {} -> {} - target is an existing file",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                    PathComparison::TargetIsAnExistingDirectory => {
-                        lazin_logger::warn!(
-                            "Skipping linking {} -> {} - target is an existing directory",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                    PathComparison::Unknown => {
-                        lazin_logger::error!(
-                            "Skipping linking {} -> {} - unknown path comparison; this is a bug and this case should be handled",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                }
-            }
-        }
+        link(self, &modules)?;
 
         Ok(())
     }
@@ -133,8 +96,8 @@ impl Linker for UnixFSLinker {
             abolute_source.display(),
             target.display()
         );
-        symlink(abolute_source, target).context("Failed to symlink")?;
-        copy_permissions(source, target)?;
+        symlink(&abolute_source, target).context("Failed to symlink")?;
+        copy_permissions(&abolute_source, target)?;
 
         Ok(())
     }
@@ -159,38 +122,7 @@ impl Linker for DryRunLinker {
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
         let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
 
-        for module in &modules {
-            for module_value in &module.values {
-                let source = module_value.source.as_path();
-                let target = module_value.target.as_path();
-                self.create_dir_all(target)?;
-                match self.compare_symlink(source, target)? {
-                    PathComparison::TargetLinkMissing => self.symlink(source, target)?,
-                    PathComparison::TargetAndSourceAlreadyLinked => self.symlink(source, target)?,
-                    PathComparison::TargetIsAnExistingFile => {
-                        lazin_logger::warn!(
-                            "Skipping linking {} -> {} - target is an existing file",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                    PathComparison::TargetIsAnExistingDirectory => {
-                        lazin_logger::warn!(
-                            "Skipping linking {} -> {} - target is an existing directory",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                    PathComparison::Unknown => {
-                        lazin_logger::error!(
-                            "Skipping linking {} -> {} - unknown path comparison; this is a bug and this case should be handled",
-                            source.display(),
-                            target.display()
-                        )
-                    }
-                }
-            }
-        }
+        link(self, &modules)?;
 
         Ok(())
     }
@@ -200,7 +132,7 @@ impl Linker for DryRunLinker {
             return Ok(());
         }
 
-        lazin_logger::debug!("Creating directory: {}", path.display());
+        lazin_logger::info!("Creating directory: {}", path.display());
         self.filesystem.insert(path.into(), FileType::Directory);
         while path.parent().is_some() {
             path = path
@@ -213,11 +145,53 @@ impl Linker for DryRunLinker {
     }
 
     fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {
-        lazin_logger::debug!("Linking {} -> {}", source.display(), target.display());
-        self.filesystem
-            .insert(source.into(), FileType::Link(target.into()));
+        lazin_logger::info!("Linking {} -> {}", source.display(), target.display());
+        self.filesystem.insert(source.into(), FileType::Link);
         Ok(())
     }
+}
+
+fn link<T: Linker>(linker: &mut T, modules: &[Module]) -> LazinResult<()> {
+    for module in modules {
+        for module_value in &module.values {
+            let source = module_value.source.as_path();
+            let target = module_value.target.as_path();
+            linker.create_dir_all(target)?;
+            match linker.compare_symlink(source, target)? {
+                PathComparison::TargetLinkMissing => linker.symlink(source, target)?,
+                PathComparison::TargetAndSourceAlreadyLinked => {
+                    lazin_logger::warn!(
+                        "Skipping linking {} -> {} - target is already linked",
+                        source.display(),
+                        target.display()
+                    )
+                }
+                PathComparison::TargetIsAnExistingFile => {
+                    lazin_logger::warn!(
+                        "Skipping linking {} -> {} - target is an existing file",
+                        source.display(),
+                        target.display()
+                    )
+                }
+                PathComparison::TargetIsAnExistingDirectory => {
+                    lazin_logger::warn!(
+                        "Skipping linking {} -> {} - target is an existing directory",
+                        source.display(),
+                        target.display()
+                    )
+                }
+                PathComparison::Unknown => {
+                    lazin_logger::error!(
+                        "Skipping linking {} -> {} - unknown path comparison; this is a bug and this case should be handled",
+                        source.display(),
+                        target.display()
+                    )
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(unix)]

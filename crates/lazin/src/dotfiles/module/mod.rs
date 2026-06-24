@@ -6,6 +6,7 @@ use crate::{
 use std::{
     borrow::Borrow,
     collections::BTreeSet,
+    env,
     fmt::Display,
     fs,
     path::{Path, PathBuf},
@@ -42,16 +43,16 @@ pub struct ModuleValue {
 }
 
 impl ModuleValue {
-    pub fn new(
+    pub fn try_new(
         source: &Path,
         module_config_value: &ModuleConfigValue,
         module_config: &ModuleConfig,
-    ) -> Self {
-        Self {
+    ) -> LazinResult<Self> {
+        Ok(Self {
             source: source.into(),
-            target: module_config_value.path().into(),
+            target: expand_tilde(module_config_value.path())?,
             encrypt: module_config_value.is_encrypted(module_config),
-        }
+        })
     }
 }
 
@@ -91,7 +92,11 @@ fn expand_directory(
         module_config: &ModuleConfig,
     ) -> LazinResult<()> {
         if !source.is_dir() {
-            out.insert(ModuleValue::new(source, module_config_value, module_config));
+            out.insert(ModuleValue::try_new(
+                source,
+                module_config_value,
+                module_config,
+            )?);
         } else {
             for child in fs::read_dir(source).context("Failed to read child directory")? {
                 let child = child.context("Failed to get child directory")?.file_name();
@@ -111,4 +116,20 @@ fn expand_directory(
         module_config,
     )?;
     Ok(module_values)
+}
+
+fn expand_tilde(path: &Path) -> LazinResult<PathBuf> {
+    if !path.starts_with("~") {
+        return Ok(path.into());
+    }
+
+    let home_dir = env::var_os("HOME").ok_or(LazinError::Custom(
+        "unable to determine HOME directory; Lazin cannot run without detecting the home directory",
+    ))?;
+    let home_dir = PathBuf::from(home_dir);
+    let stripped_path = path
+        .strip_prefix("~")
+        .context("Failed to strip tilde prefix")?;
+
+    Ok(home_dir.join(stripped_path))
 }
