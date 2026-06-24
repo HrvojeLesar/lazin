@@ -1,13 +1,13 @@
-use crate::error::Error;
+use crate::error::LazinError;
 
 pub struct TomlDiagnostic<'a> {
     filename: &'a str,
     source: &'a str,
-    error: &'a Error,
+    error: &'a LazinError,
 }
 
 impl<'a> TomlDiagnostic<'a> {
-    pub fn new(filename: &'a str, source: &'a str, error: &'a Error) -> Self {
+    pub fn new(filename: &'a str, source: &'a str, error: &'a LazinError) -> Self {
         Self {
             filename,
             source,

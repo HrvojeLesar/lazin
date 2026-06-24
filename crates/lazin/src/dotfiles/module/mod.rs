@@ -1,7 +1,7 @@
 use crate::{
     common::Key,
     dotfiles::module::config::{ModuleConfig, ModuleConfigValue},
-    error::{LazinError, LazinResult},
+    error::{Context, LazinError, LazinResult},
 };
 use std::{
     borrow::Borrow,
@@ -93,12 +93,8 @@ fn expand_directory(
         if !source.is_dir() {
             out.insert(ModuleValue::new(source, module_config_value, module_config));
         } else {
-            for child in fs::read_dir(source)
-                .map_err(|e| LazinError::IoExt("Failed to read child dir", e))?
-            {
-                let child = child
-                    .map_err(|e| LazinError::IoExt("Failed to get child directory", e))?
-                    .file_name();
+            for child in fs::read_dir(source).context("Failed to read child directory")? {
+                let child = child.context("Failed to get child directory")?.file_name();
                 let child_source = source.join(&child);
                 let child_target = module_config_value.join(&child);
                 walk(&child_source, &child_target, out, module_config)?;

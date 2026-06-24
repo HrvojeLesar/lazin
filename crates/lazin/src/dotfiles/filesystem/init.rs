@@ -1,4 +1,4 @@
-use crate::error::{LazinError, LazinResult};
+use crate::error::{Context, LazinError, LazinResult};
 use std::{
     fs::{self, OpenOptions},
     io::{ErrorKind, Write},
@@ -38,13 +38,11 @@ fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> LazinResult<W
         .open(base_dir.to_path_buf().join(filename));
 
     if let Ok(mut file) = new_file {
-        if let Err(e) = file.write_all(data) {
-            return Err(LazinError::IoExt("Failed to write file", e));
-        }
+        file.write_all(data).context("Failed to write file")?;
     } else if let Err(e) = new_file {
         match e.kind() {
             ErrorKind::AlreadyExists => write_state = WriteFileState::Skipped,
-            _ => return Err(LazinError::IoExt("File write error", e)),
+            _ => return LazinError::Io(e).context("File write error"),
         }
     }
 
@@ -52,7 +50,7 @@ fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> LazinResult<W
 }
 
 pub fn init_directory(directory: &Path) -> LazinResult<()> {
-    fs::create_dir_all(directory).map_err(|e| LazinError::IoExt("Failed to create directories", e))
+    fs::create_dir_all(directory).context("Failed to create directories")
 }
 
 pub fn init_default_config(base_dir: &Path) -> LazinResult<()> {

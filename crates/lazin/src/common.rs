@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     dotfiles::{config::Config, resolved_config::ResolvedConfig},
-    error::{Error, LazinError, LazinResult},
+    error::{Context, LazinError, LazinResult},
 };
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
@@ -53,10 +53,8 @@ pub fn directory(path: Option<&Path>) -> &Path {
 pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     let mut files = Vec::new();
 
-    for entry in
-        fs::read_dir(directory).map_err(|e| LazinError::IoExt("Failed to read directory", e))?
-    {
-        let entry = entry.map_err(|e| LazinError::IoExt("Faield to read directory entry", e))?;
+    for entry in fs::read_dir(directory).context("Failed to read directory")? {
+        let entry = entry.context("Faield to read directory entry")?;
         let path = entry.path();
 
         if path.extension().is_some_and(|ext| ext == "toml")
@@ -74,11 +72,11 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConf
 
     match directory.try_exists() {
         Ok(true) => {}
-        Ok(false) => return Err(Error::directory_does_not_exist(directory)),
+        Ok(false) => return Err(LazinError::directory_does_not_exist(directory).into()),
         Err(e) if e.kind() == ErrorKind::NotFound => {
-            return Err(Error::directory_does_not_exist(directory));
+            return Err(LazinError::directory_does_not_exist(directory).into());
         }
-        Err(e) => return Err(LazinError::IoExt("Failed to check if directory exists", e)),
+        Err(e) => return LazinError::Io(e).context("Failed to check if directory exists"),
     }
 
     let config = Config::parse(directory)?;

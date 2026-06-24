@@ -17,8 +17,7 @@ pub struct DuplicateKeysError {
     pub duplicates: DuplicateKeys,
 }
 
-pub type LazinError = Error;
-pub type LazinResult<T> = Result<T, LazinError>;
+pub type LazinResult<T, C: Display = &'static str> = Result<T, LazinContextError<C>>;
 
 #[derive(Debug)]
 pub struct TomlError {
@@ -48,10 +47,9 @@ impl Display for TomlError {
 }
 
 #[derive(Debug)]
-pub enum Error {
+pub enum LazinError {
     Toml(Box<TomlError>),
     Io(std::io::Error),
-    IoExt(&'static str, std::io::Error),
     DuplicateKeys(DuplicateKeys),
     DirectoryDoesNotExist(String),
     Custom(&'static str),
@@ -60,30 +58,29 @@ pub enum Error {
     WorkspaceNotFound(Key),
 }
 
-impl Error {
+impl LazinError {
     pub fn directory_does_not_exist(path: &Path) -> Self {
         Self::DirectoryDoesNotExist(format!("{}", path.display()))
     }
 }
 
 // TODO: Better display for results
-impl Display for Error {
+impl Display for LazinError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Toml(error) => write!(f, "Toml error: {}", error),
-            Error::Io(error) => write!(f, "Io error: {}", error),
-            Error::IoExt(message, error) => write!(f, "{}: {}", message, error),
-            Error::DuplicateKeys(error) => {
+            LazinError::Toml(error) => write!(f, "Toml error: {}", error),
+            LazinError::Io(error) => write!(f, "Io error: {}", error),
+            LazinError::DuplicateKeys(error) => {
                 write!(
                     f,
                     "Found duplicate keys, please make all workspaces and module names unique. Duplicate names: {}",
                     duplicate_keys_string(error)
                 )
             }
-            Error::Custom(c) => write!(f, "{}", c),
-            Error::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
-            Error::InvalidModuleSources => write!(f, "Invalid module sources"),
-            Error::ModuleNotFound(w, m) => {
+            LazinError::Custom(c) => write!(f, "{}", c),
+            LazinError::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
+            LazinError::InvalidModuleSources => write!(f, "Invalid module sources"),
+            LazinError::ModuleNotFound(w, m) => {
                 write!(
                     f,
                     "Workspace '{}' contains an unconfigured module '{}'",
@@ -91,26 +88,26 @@ impl Display for Error {
                     m.as_ref(),
                 )
             }
-            Error::WorkspaceNotFound(workspace) => {
+            LazinError::WorkspaceNotFound(workspace) => {
                 write!(f, "Could not find workspace: '{}'", workspace)
             }
         }
     }
 }
 
-impl From<TomlError> for Error {
+impl From<TomlError> for LazinError {
     fn from(value: TomlError) -> Self {
         Self::Toml(Box::new(value))
     }
 }
 
-impl From<DuplicateKeysError> for Error {
+impl From<DuplicateKeysError> for LazinError {
     fn from(value: DuplicateKeysError) -> Self {
         Self::DuplicateKeys(value.duplicates)
     }
 }
 
-impl From<Vec<DuplicateKeysError>> for Error {
+impl From<Vec<DuplicateKeysError>> for LazinError {
     fn from(value: Vec<DuplicateKeysError>) -> Self {
         let keys = value.into_iter().fold(Vec::new(), |mut acc, e| {
             acc.extend(e.duplicates);
@@ -120,10 +117,94 @@ impl From<Vec<DuplicateKeysError>> for Error {
     }
 }
 
+impl From<std::io::Error> for LazinError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value)
+    }
+}
+
 fn duplicate_keys_string(duplicates: &[Key]) -> String {
     duplicates
         .iter()
         .map(|dup| dup.str())
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+#[derive(Debug)]
+pub enum LazinContextError<C> {
+    WithContext { context: C, error: LazinError },
+    WithoutContext(LazinError),
+}
+
+impl<C: Display> From<LazinError> for LazinContextError<C> {
+    fn from(value: LazinError) -> Self {
+        Self::WithoutContext(value)
+    }
+}
+
+impl<C: Display> Display for LazinContextError<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LazinContextError::WithContext { context, error } => {
+                write!(f, "{}: {}", context, error)
+            }
+            LazinContextError::WithoutContext(error) => error.fmt(f),
+        }
+    }
+}
+
+pub trait Context<T> {
+    fn context<C: Display>(self, context: C) -> Result<T, LazinContextError<C>>;
+    fn with_context<C: Display, F: FnOnce() -> C>(
+        self,
+        context: F,
+    ) -> Result<T, LazinContextError<C>>;
+}
+
+impl<T, E> Context<T> for Result<T, E>
+where
+    E: Into<LazinError>,
+{
+    fn context<C: Display>(self, context: C) -> Result<T, LazinContextError<C>> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(error) => Err(LazinContextError::WithContext {
+                context,
+                error: error.into(),
+            }),
+        }
+    }
+
+    fn with_context<C: Display, F: FnOnce() -> C>(
+        self,
+        context: F,
+    ) -> Result<T, LazinContextError<C>> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(error) => Err(LazinContextError::WithContext {
+                context: context(),
+                error: error.into(),
+            }),
+        }
+    }
+}
+
+impl<T> Context<T> for LazinError {
+    fn context<C: Display>(self, context: C) -> Result<T, LazinContextError<C>> {
+        Err(LazinContextError::WithContext {
+            context,
+            error: self,
+        })
+    }
+
+    fn with_context<C: Display, F: FnOnce() -> C>(
+        self,
+        context: F,
+    ) -> Result<T, LazinContextError<C>> {
+        Err(LazinContextError::WithContext {
+            context: context(),
+            error: self,
+        })
+    }
 }

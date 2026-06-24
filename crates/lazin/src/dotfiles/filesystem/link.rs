@@ -2,6 +2,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
+use crate::error::Context;
 use crate::{
     common::Key,
     dotfiles::resolved_config::ResolvedConfig,
@@ -33,13 +34,13 @@ pub trait Linker {
         match target.try_exists() {
             Ok(true) => (),
             Ok(false) => return Ok(PathComparison::TargetLinkMissing),
-            Err(e) => return Err(LazinError::IoExt("Failed to check if target exists", e)),
+            Err(e) => return LazinError::Io(e).context("Failed to check if target exists"),
         }
 
-        let canonicalized_source = fs::canonicalize(source)
-            .map_err(|e| LazinError::IoExt("Failed to canonicalize source", e))?;
-        let canonicalized_target = fs::canonicalize(target)
-            .map_err(|e| LazinError::IoExt("Failed to canonicalize target", e))?;
+        let canonicalized_source =
+            fs::canonicalize(source).context("Failed to canonicalize source")?;
+        let canonicalized_target =
+            fs::canonicalize(target).context("Failed to canonicalize target")?;
 
         //TODO:  Handle case where source and target are the exact same file
         if canonicalized_source == canonicalized_target {
@@ -124,15 +125,15 @@ impl Linker for UnixFSLinker {
     fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {
         use std::os::unix::fs::symlink;
 
-        let abolute_source = fs::canonicalize(source)
-            .map_err(|e| LazinError::IoExt("failed to get absolute path for source", e))?;
+        let abolute_source =
+            fs::canonicalize(source).context("Failed to get absolute path for source")?;
 
         lazin_logger::info!(
             "Linking {} -> {}",
             abolute_source.display(),
             target.display()
         );
-        symlink(abolute_source, target).map_err(|e| LazinError::IoExt("Failed to symlink", e))?;
+        symlink(abolute_source, target).context("Failed to symlink")?;
         copy_permissions(source, target)?;
 
         Ok(())
@@ -224,10 +225,9 @@ fn copy_permissions(source: &Path, target: &Path) -> LazinResult<()> {
     use std::fs;
 
     let source_permissions = fs::metadata(source)
-        .map_err(|e| LazinError::IoExt("Faild to get source metadata", e))?
+        .context("Failed to get source metadata")?
         .permissions();
-    fs::set_permissions(target, source_permissions)
-        .map_err(|e| LazinError::IoExt("Failed to set permissions", e))?;
+    fs::set_permissions(target, source_permissions).context("Failed to set permissions")?;
 
     Ok(())
 }
@@ -236,8 +236,7 @@ fn create_parent_directories(target: &Path) -> LazinResult<()> {
     if let Some(parent_dir) = target.parent()
         && !parent_dir.exists()
     {
-        fs::create_dir_all(parent_dir)
-            .map_err(|e| LazinError::IoExt("Failed to create directories", e))?;
+        fs::create_dir_all(parent_dir).context("Failed to create directories")?;
         lazin_logger::info!("Creating directory: {}", parent_dir.display());
     }
 

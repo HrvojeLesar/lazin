@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::{
     common::{self, Key, TomlFile},
     dotfiles::{module::config::ModuleConfig, workspace::RawWorkspace},
-    error::{DuplicateKeysError, LazinError, LazinResult, TomlError},
+    error::{Context, DuplicateKeysError, LazinError, LazinResult, TomlError},
 };
 
 type RawEntries = BTreeMap<Key, RawEntry>;
@@ -63,17 +63,20 @@ impl Config {
             for tomlfile in config_files {
                 file_data_buffer.clear();
                 File::open(&tomlfile.path)
-                    .map_err(|e| LazinError::IoExt("File error", e))?
+                    .context("File error")?
                     .read_to_string(&mut file_data_buffer)
-                    .map_err(|e| LazinError::IoExt("File read to string error", e))?;
+                    .context("File read to string error")?;
                 match toml::from_str::<RawEntries>(&file_data_buffer) {
-                    Ok(file_entires) => merge_entries(&mut entries, file_entires)?,
+                    Ok(file_entires) => {
+                        merge_entries(&mut entries, file_entires).map_err(LazinError::from)?
+                    }
                     Err(e) => {
                         return Err(LazinError::from(TomlError {
                             filename: tomlfile.filename,
                             source: file_data_buffer.clone(),
                             error: e,
-                        }));
+                        })
+                        .into());
                     }
                 }
             }
