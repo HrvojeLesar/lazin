@@ -156,6 +156,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazin_gpg_wrapper"
+version = "0.1.0"
+
+[[package]]
 name = "lazin_logger"
 version = "0.1.0"
 
