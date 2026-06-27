@@ -3,6 +3,7 @@ use crate::cli::Cli;
 mod cli;
 mod common;
 mod dotfiles;
+mod encryption_management;
 mod error;
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
-use crate::dotfiles::module::Module;
+use crate::dotfiles::module::{Module, ModuleValue};
 use crate::error::Context;
 use crate::{
     common::Key,
@@ -72,7 +72,6 @@ impl UnixFSLinker {
 
 #[cfg(unix)]
 impl Linker for UnixFSLinker {
-    // TODO: duplicate from dry run linker
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
         let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
 
@@ -118,7 +117,6 @@ impl DryRunLinker {
 }
 
 impl Linker for DryRunLinker {
-    // TODO: duplicate
     fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
         let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
 
@@ -154,7 +152,11 @@ impl Linker for DryRunLinker {
 fn link<T: Linker>(linker: &mut T, modules: &[Module]) -> LazinResult<()> {
     for module in modules {
         for module_value in &module.values {
-            let source = module_value.source.as_path();
+            let source = if module_value.encrypt {
+                try_decrypt_and_get_source(module_value)?
+            } else {
+                module_value.source.as_path()
+            };
             let target = module_value.target.as_path();
             linker.create_dir_all(target)?;
             match linker.compare_symlink(source, target)? {
@@ -215,4 +217,13 @@ fn create_parent_directories(target: &Path) -> LazinResult<()> {
     }
 
     Ok(())
+}
+
+fn try_decrypt_and_get_source(module_value: &ModuleValue) -> LazinResult<&Path> {
+    assert!(
+        module_value.encrypt,
+        "expected module value needs to have encrypt set to true"
+    );
+
+    todo!()
 }

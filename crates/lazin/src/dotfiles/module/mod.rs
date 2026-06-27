@@ -39,6 +39,7 @@ impl AsRef<Key> for ModuleName {
 pub struct ModuleValue {
     pub source: PathBuf,
     pub target: PathBuf,
+    // TODO: rename to manage_entryption or something more descriptive
     pub encrypt: bool,
 }
 

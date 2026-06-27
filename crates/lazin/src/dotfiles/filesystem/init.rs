@@ -15,12 +15,13 @@ const LAZIN_DEFAULT_WORKSPACE: &str = r#"# workspace_name = [
 "#;
 
 const LAZIN_DEFAULT_MODULE: &str = r#"# [my_module]
+# encrypt = false # optional and false by default, treats files in modules as encrypted
 # source_file="/.config/my_program/source_file"
 # source_dir="/.config/source_dir"
 # "more/specific/path/to/source_file"="/.config/my_program/source_file"
 # source_file_with_attributes = {
 #   path = "/.config/my_program/source_file_with_attributes",
-#   encrypt = false # encrypt is optional
+#   encrypt = true # override module level encrypt
 # }
 "#;
 
