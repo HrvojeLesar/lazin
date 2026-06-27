@@ -46,7 +46,6 @@ impl Display for TomlError {
     }
 }
 
-#[derive(Debug)]
 pub enum LazinError {
     Toml(Box<TomlError>),
     Io(std::io::Error),
@@ -57,6 +56,7 @@ pub enum LazinError {
     ModuleNotFound(WorkspaceName, ModuleName),
     WorkspaceNotFound(Key),
     StripPrefix(std::path::StripPrefixError),
+    GpgWrapper(lazin_gpg_wrapper::Error),
 }
 
 impl LazinError {
@@ -95,6 +95,7 @@ impl Display for LazinError {
             LazinError::StripPrefix(strip_prefix_error) => {
                 write!(f, "Failed to strip prefix: {}", strip_prefix_error)
             }
+            LazinError::GpgWrapper(error) => error.fmt(f),
         }
     }
 }
@@ -133,6 +134,12 @@ impl From<std::path::StripPrefixError> for LazinError {
     }
 }
 
+impl From<lazin_gpg_wrapper::Error> for LazinError {
+    fn from(value: lazin_gpg_wrapper::Error) -> Self {
+        Self::GpgWrapper(value)
+    }
+}
+
 fn duplicate_keys_string(duplicates: &[Key]) -> String {
     duplicates
         .iter()
@@ -141,7 +148,6 @@ fn duplicate_keys_string(duplicates: &[Key]) -> String {
         .join(", ")
 }
 
-#[derive(Debug)]
 pub enum LazinContextError<C> {
     WithContext { context: C, error: LazinError },
     WithoutContext(LazinError),

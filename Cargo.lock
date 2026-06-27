@@ -203,6 +203,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "codespan-reporting",
+ "lazin_gpg_wrapper",
  "lazin_logger",
  "lazin_pipeline",
  "serde",

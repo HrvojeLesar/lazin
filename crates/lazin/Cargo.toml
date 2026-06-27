@@ -11,3 +11,4 @@ lazin_logger = { path = "../lazin_logger" }
 lazin_pipeline = { path = "../lazin_pipeline" }
 codespan-reporting = "0.13.1"
 sha2 = "=0.10.9"
+lazin_gpg_wrapper = { path = "../lazin_gpg_wrapper" }

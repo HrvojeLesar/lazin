@@ -4,14 +4,16 @@ pub enum Error {
     GpgNotFound,
     Io(std::io::Error),
     EncryptionFailed(String),
+    DecryptionFailed(String),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Io(error) => error.fmt(f),
-            Error::GpgNotFound => write!(f, "couldn't determine 'gpg' is executable"),
-            Error::EncryptionFailed(s) => write!(f, "encryption failed with error: {}", s),
+            Error::Io(error) => write!(f, "Io error: {}", error),
+            Error::GpgNotFound => write!(f, "Couldn't determine 'gpg' is executable"),
+            Error::EncryptionFailed(s) => write!(f, "Encryption failed with error: {}", s),
+            Error::DecryptionFailed(s) => write!(f, "Decryption failed with error: {}", s),
         }
     }
 }
@@ -23,14 +25,14 @@ impl From<std::io::Error> for Error {
 }
 
 pub struct EncryptOptions<'a> {
-    recipient: &'a str,
-    input: &'a Path,
-    output: &'a Path,
+    pub recipient: &'a str,
+    pub input: &'a Path,
+    pub output: &'a Path,
 }
 
 pub struct DecryptOptions<'a> {
-    input: &'a Path,
-    output: &'a Path,
+    pub input: &'a Path,
+    pub output: &'a Path,
 }
 
 pub fn is_gpg_available() -> Result<(), Error> {
