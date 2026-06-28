@@ -1,6 +1,7 @@
 use clap::{ArgAction, Parser, Subcommand};
+use lazin_error::LazinResult;
 
-use crate::{common, error::LazinResult, exit_error};
+use crate::{common, exit_error};
 
 pub mod check;
 pub mod init;

@@ -7,9 +7,8 @@
 
 use std::path::{Path, PathBuf};
 
+use lazin_error::{Context, LazinResult};
 use lazin_gpg_wrapper::DecryptOptions;
-
-use crate::error::{Context, LazinResult};
 
 const GPG_EXTENSION: &str = "gpg";
 

@@ -1,9 +1,9 @@
 use crate::{
     common,
     dotfiles::filesystem::init::{init_default_config, init_directory},
-    error::LazinResult,
 };
 use clap::Args;
+use lazin_error::LazinResult;
 use std::path::{Path, PathBuf};
 
 /// Initializes new `lazin` example configuration

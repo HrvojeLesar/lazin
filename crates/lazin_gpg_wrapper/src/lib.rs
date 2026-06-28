@@ -1,5 +1,6 @@
 use std::{fmt::Display, path::Path, process::Command};
 
+#[derive(Debug)]
 pub enum Error {
     GpgNotFound,
     Io(std::io::Error),
@@ -14,6 +15,17 @@ impl Display for Error {
             Error::GpgNotFound => write!(f, "Couldn't determine 'gpg' is executable"),
             Error::EncryptionFailed(s) => write!(f, "Encryption failed with error: {}", s),
             Error::DecryptionFailed(s) => write!(f, "Decryption failed with error: {}", s),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Io(error) => error.source(),
+            Error::GpgNotFound => None,
+            Error::EncryptionFailed(_) => None,
+            Error::DecryptionFailed(_) => None,
         }
     }
 }

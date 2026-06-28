@@ -203,6 +203,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "codespan-reporting",
+ "lazin_error",
  "lazin_gpg_wrapper",
  "lazin_logger",
  "lazin_pipeline",
@@ -210,6 +211,10 @@ dependencies = [
  "sha2",
  "toml",
 ]
+
+[[package]]
+name = "lazin_error"
+version = "0.1.0"
 
 [[package]]
 name = "lazin_gpg_wrapper"

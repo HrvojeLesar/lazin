@@ -5,12 +5,13 @@ use std::{
     path::Path,
 };
 
+use lazin_error::{Context, LazinResult};
 use serde::Deserialize;
 
 use crate::{
     common::{self, Key, TomlFile},
     dotfiles::{module::config::ModuleConfig, workspace::RawWorkspace},
-    error::{Context, DuplicateKeysError, LazinError, LazinResult, TomlError},
+    error::{DuplicateKeysError, Error, TomlError},
 };
 
 type RawEntries = BTreeMap<Key, RawEntry>;
@@ -68,10 +69,10 @@ impl Config {
                     .context("File read to string error")?;
                 match toml::from_str::<RawEntries>(&file_data_buffer) {
                     Ok(file_entires) => {
-                        merge_entries(&mut entries, file_entires).map_err(LazinError::from)?
+                        merge_entries(&mut entries, file_entires).map_err(Error::from)?
                     }
                     Err(e) => {
-                        return Err(LazinError::from(TomlError {
+                        return Err(Error::from(TomlError {
                             filename: tomlfile.filename,
                             source: file_data_buffer.clone(),
                             error: e,

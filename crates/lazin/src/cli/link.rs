@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use clap::Args;
+use lazin_error::LazinResult;
 
 use crate::{
     common::{self, Key},
     dotfiles::filesystem::link::{DryRunLinker, Linker},
-    error::LazinResult,
     exit_error,
 };
 

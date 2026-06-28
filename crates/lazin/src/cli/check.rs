@@ -1,9 +1,7 @@
-use crate::{
-    common::{self},
-    error::LazinResult,
-};
+use crate::common::{self};
 
 use clap::Args;
+use lazin_error::LazinResult;
 use std::path::PathBuf;
 
 /// Check configuration validity

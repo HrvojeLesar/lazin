@@ -1,4 +1,6 @@
-use crate::{common, error::LazinResult};
+use lazin_error::LazinResult;
+
+use crate::common;
 use std::path::Path;
 
 pub fn list_workspaces(config_directory: Option<&Path>) -> LazinResult<()> {

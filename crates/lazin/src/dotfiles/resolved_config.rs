@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use lazin_error::LazinResult;
 use lazin_pipeline::Bind;
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
         module::{Module, ModuleName, config::ModuleConfig},
         workspace::{Workspace, WorkspaceName},
     },
-    error::{LazinError, LazinResult},
+    error::Error,
 };
 
 pub struct Valid<T>(T);
@@ -77,7 +78,7 @@ impl ResolvedConfig {
                 workspace.modules.iter().try_for_each(|module_name| {
                     match modules.contains_key(module_name) {
                         true => Ok(()),
-                        false => Err(LazinError::ModuleNotFound(
+                        false => Err(Error::ModuleNotFound(
                             workspace.name.clone(),
                             ModuleName(module_name.clone()),
                         )),
@@ -97,7 +98,7 @@ impl ResolvedConfig {
         let workspace = self
             .workspaces
             .get(workspace_key)
-            .ok_or(LazinError::WorkspaceNotFound(workspace_key.clone()))?;
+            .ok_or(Error::WorkspaceNotFound(workspace_key.clone()))?;
 
         Ok(self
             .modules
@@ -141,7 +142,7 @@ fn validate_module_sources(
                 }
             }) {
             true => Ok(()),
-            false => Err(LazinError::InvalidModuleSources),
+            false => Err(Error::InvalidModuleSources),
         }
     })?;
 

@@ -1,9 +1,12 @@
-use crate::error::{Context, LazinError, LazinResult};
 use std::{
     fs::{self, OpenOptions},
     io::{ErrorKind, Write},
     path::Path,
 };
+
+use lazin_error::{Context, LazinResult};
+
+use crate::error::Error;
 
 const LAZIN_DEFAULT_WORKSPACE_FILE: &str = "workspace.toml";
 const LAZIN_DEFAULT_MODULE_FILE: &str = "modules.toml";
@@ -43,7 +46,7 @@ fn try_write_file(base_dir: &Path, filename: &str, data: &[u8]) -> LazinResult<W
     } else if let Err(e) = new_file {
         match e.kind() {
             ErrorKind::AlreadyExists => write_state = WriteFileState::Skipped,
-            _ => return LazinError::Io(e).context("File write error"),
+            _ => return Err(Error::Io(e)).context("File write error"),
         }
     }
 
