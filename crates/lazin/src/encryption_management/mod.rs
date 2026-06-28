@@ -5,22 +5,22 @@
 //      add source to .gitignore
 // Config resolver should try to decrypt source files
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use lazin_error::{Context, LazinResult};
 use lazin_gpg_wrapper::DecryptOptions;
 
+use crate::cache::Cache;
+
 const GPG_EXTENSION: &str = "gpg";
 
 pub struct EncryptionManager {
-    cache_dir: PathBuf,
+    cache: Cache,
 }
 
 impl EncryptionManager {
-    pub fn new<T: Into<PathBuf>>(cache_dir: T) -> Self {
-        Self {
-            cache_dir: cache_dir.into(),
-        }
+    pub fn new(cache: Cache) -> Self {
+        Self { cache }
     }
 
     pub fn decrypt(&mut self, file: &Path) -> LazinResult<()> {

@@ -3,7 +3,7 @@ use lazin_error::{Context, LazinResult};
 use crate::{
     common::Key,
     dotfiles::module::config::{ModuleConfig, ModuleConfigValue},
-    error::Error,
+    error::LazinError,
 };
 use std::{
     borrow::Borrow,
@@ -126,7 +126,7 @@ fn expand_tilde(path: &Path) -> LazinResult<PathBuf> {
         return Ok(path.into());
     }
 
-    let home_dir = env::var_os("HOME").ok_or(Error::Custom(
+    let home_dir = env::var_os("HOME").ok_or(LazinError::Custom(
         "unable to determine HOME directory; Lazin cannot run without detecting the home directory",
     ))?;
     let home_dir = PathBuf::from(home_dir);

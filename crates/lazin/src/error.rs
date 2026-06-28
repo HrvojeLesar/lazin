@@ -45,7 +45,7 @@ impl Display for TomlError {
 }
 
 #[derive(Debug)]
-pub enum Error {
+pub enum LazinError {
     Toml(Box<TomlError>),
     Io(std::io::Error),
     DuplicateKeys(DuplicateKeys),
@@ -58,28 +58,28 @@ pub enum Error {
     GpgWrapper(lazin_gpg_wrapper::Error),
 }
 
-impl Error {
+impl LazinError {
     pub fn directory_does_not_exist(path: &Path) -> Self {
         Self::DirectoryDoesNotExist(format!("{}", path.display()))
     }
 }
 
-impl Display for Error {
+impl Display for LazinError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Toml(error) => write!(f, "Toml error: {}", error),
-            Error::Io(error) => write!(f, "Io error: {}", error),
-            Error::DuplicateKeys(error) => {
+            LazinError::Toml(error) => write!(f, "Toml error: {}", error),
+            LazinError::Io(error) => write!(f, "Io error: {}", error),
+            LazinError::DuplicateKeys(error) => {
                 write!(
                     f,
                     "Found duplicate keys, please make all workspaces and module names unique. Duplicate names: {}",
                     duplicate_keys_string(error)
                 )
             }
-            Error::Custom(c) => write!(f, "{}", c),
-            Error::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
-            Error::InvalidModuleSources => write!(f, "Invalid module sources"),
-            Error::ModuleNotFound(w, m) => {
+            LazinError::Custom(c) => write!(f, "{}", c),
+            LazinError::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
+            LazinError::InvalidModuleSources => write!(f, "Invalid module sources"),
+            LazinError::ModuleNotFound(w, m) => {
                 write!(
                     f,
                     "Workspace '{}' contains an unconfigured module '{}'",
@@ -87,47 +87,47 @@ impl Display for Error {
                     m.as_ref(),
                 )
             }
-            Error::WorkspaceNotFound(workspace) => {
+            LazinError::WorkspaceNotFound(workspace) => {
                 write!(f, "Could not find workspace: '{}'", workspace)
             }
-            Error::StripPrefix(strip_prefix_error) => {
+            LazinError::StripPrefix(strip_prefix_error) => {
                 write!(f, "Failed to strip prefix: {}", strip_prefix_error)
             }
-            Error::GpgWrapper(error) => error.fmt(f),
+            LazinError::GpgWrapper(error) => error.fmt(f),
         }
     }
 }
 
-impl std::error::Error for Error {
+impl std::error::Error for LazinError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::Toml(error) => error.error.source(),
-            Error::Io(error) => error.source(),
-            Error::DuplicateKeys(_) => None,
-            Error::Custom(_) => None,
-            Error::DirectoryDoesNotExist(_) => None,
-            Error::InvalidModuleSources => None,
-            Error::ModuleNotFound(_, _) => None,
-            Error::WorkspaceNotFound(_) => None,
-            Error::StripPrefix(strip_prefix_error) => strip_prefix_error.source(),
-            Error::GpgWrapper(error) => error.source(),
+            LazinError::Toml(error) => error.error.source(),
+            LazinError::Io(error) => error.source(),
+            LazinError::DuplicateKeys(_) => None,
+            LazinError::Custom(_) => None,
+            LazinError::DirectoryDoesNotExist(_) => None,
+            LazinError::InvalidModuleSources => None,
+            LazinError::ModuleNotFound(_, _) => None,
+            LazinError::WorkspaceNotFound(_) => None,
+            LazinError::StripPrefix(strip_prefix_error) => strip_prefix_error.source(),
+            LazinError::GpgWrapper(error) => error.source(),
         }
     }
 }
 
-impl From<TomlError> for Error {
+impl From<TomlError> for LazinError {
     fn from(value: TomlError) -> Self {
         Self::Toml(Box::new(value))
     }
 }
 
-impl From<DuplicateKeysError> for Error {
+impl From<DuplicateKeysError> for LazinError {
     fn from(value: DuplicateKeysError) -> Self {
         Self::DuplicateKeys(value.duplicates)
     }
 }
 
-impl From<Vec<DuplicateKeysError>> for Error {
+impl From<Vec<DuplicateKeysError>> for LazinError {
     fn from(value: Vec<DuplicateKeysError>) -> Self {
         let keys = value.into_iter().fold(Vec::new(), |mut acc, e| {
             acc.extend(e.duplicates);
@@ -137,19 +137,19 @@ impl From<Vec<DuplicateKeysError>> for Error {
     }
 }
 
-impl From<std::io::Error> for Error {
+impl From<std::io::Error> for LazinError {
     fn from(value: std::io::Error) -> Self {
         Self::Io(value)
     }
 }
 
-impl From<std::path::StripPrefixError> for Error {
+impl From<std::path::StripPrefixError> for LazinError {
     fn from(value: std::path::StripPrefixError) -> Self {
         Self::StripPrefix(value)
     }
 }
 
-impl From<lazin_gpg_wrapper::Error> for Error {
+impl From<lazin_gpg_wrapper::Error> for LazinError {
     fn from(value: lazin_gpg_wrapper::Error) -> Self {
         Self::GpgWrapper(value)
     }

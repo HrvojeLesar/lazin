@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     dotfiles::{config::Config, resolved_config::ResolvedConfig},
-    error::Error,
+    error::LazinError,
 };
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
@@ -73,11 +73,11 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConf
 
     match directory.try_exists() {
         Ok(true) => {}
-        Ok(false) => return Err(Error::directory_does_not_exist(directory).into()),
+        Ok(false) => return Err(LazinError::directory_does_not_exist(directory).into()),
         Err(e) if e.kind() == ErrorKind::NotFound => {
-            return Err(Error::directory_does_not_exist(directory).into());
+            return Err(LazinError::directory_does_not_exist(directory).into());
         }
-        Err(e) => return Err(Error::Io(e)).context("Failed to check if directory exists"),
+        Err(e) => return Err(LazinError::Io(e)).context("Failed to check if directory exists"),
     }
 
     let config = Config::parse(directory)?;

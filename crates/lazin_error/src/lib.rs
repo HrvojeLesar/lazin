@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-pub type LazinResult<T, E = LazinError> = Result<T, E>;
+pub type LazinResult<T = (), E = LazinError> = Result<T, E>;
 
 use std::error::Error as StdError;
 

@@ -4,7 +4,7 @@ use std::{collections::BTreeMap, fs, path::PathBuf};
 use lazin_error::{Context, LazinResult};
 
 use crate::dotfiles::module::{Module, ModuleValue};
-use crate::{common::Key, dotfiles::resolved_config::ResolvedConfig, error::Error};
+use crate::{common::Key, dotfiles::resolved_config::ResolvedConfig, error::LazinError};
 
 enum FileType {
     Link,
@@ -31,7 +31,7 @@ pub trait Linker {
         match target.try_exists() {
             Ok(true) => (),
             Ok(false) => return Ok(PathComparison::TargetLinkMissing),
-            Err(e) => return Err(Error::Io(e)).context("Failed to check if target exists"),
+            Err(e) => return Err(LazinError::Io(e)).context("Failed to check if target exists"),
         }
 
         let canonicalized_source =
@@ -132,7 +132,7 @@ impl Linker for DryRunLinker {
         while path.parent().is_some() {
             path = path
                 .parent()
-                .ok_or(Error::Custom("failed to get path parent"))?;
+                .ok_or(LazinError::Custom("failed to get path parent"))?;
             self.filesystem.insert(path.into(), FileType::Directory);
         }
 

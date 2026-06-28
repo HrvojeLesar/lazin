@@ -1,5 +1,6 @@
 use crate::cli::Cli;
 
+mod cache;
 mod cli;
 mod common;
 mod dotfiles;
