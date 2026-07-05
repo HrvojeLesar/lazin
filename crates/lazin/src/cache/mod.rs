@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, btree_map},
     fs::{self, File},
     io::{BufWriter, ErrorKind, Read, Write},
     path::{Path, PathBuf},
@@ -9,20 +9,21 @@ use lazin_error::{Context, LazinResult};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-
-const CACHE_FILE: &str = ".lazin_cache";
+const CACHE_FILE: &str = "lazin.cache";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-struct FileHash(String);
+pub struct FileHash(String);
 
 impl FileHash {
-    fn hash_file<P: AsRef<Path>>(path: P) -> LazinResult<Self> {
-        let mut file = File::open(path)?;
+    pub fn hash<P: AsRef<Path>>(path: P) -> LazinResult<Self> {
+        let mut file = File::open(path).context("Failed to open file for hashing")?;
         let mut hasher = Sha256::new();
         let mut buffer = [0u8; 8192];
 
         loop {
-            let n = file.read(&mut buffer)?;
+            let n = file
+                .read(&mut buffer)
+                .context("Failed to read hashing file contents")?;
             if n == 0 {
                 break;
             }
@@ -44,12 +45,12 @@ struct CacheEntries {
 }
 
 pub struct Cache {
-    path: PathBuf,
+    file_path: PathBuf,
     entries: CacheEntries,
 }
 
 pub enum Entry {
-    Encryption(PathBuf),
+    Encryption(PathBuf, FileHash),
 }
 
 pub enum CompareEntry {
@@ -81,7 +82,7 @@ impl Cache {
         let entries = toml::from_str(&file_data)?;
 
         Ok(Self {
-            path: cache_path,
+            file_path: cache_path,
             entries,
         })
     }
@@ -89,7 +90,7 @@ impl Cache {
     pub fn save(&self) -> LazinResult {
         let serialized_entries = toml::to_string(&self.entries)?;
 
-        let file = fs::OpenOptions::new().write(true).open(&self.path)?;
+        let file = fs::OpenOptions::new().write(true).open(&self.file_path)?;
         let mut writer = BufWriter::new(file);
 
         writeln!(
@@ -114,15 +115,23 @@ impl Cache {
             .retain(|k, _| entries_to_keep.contains(k));
     }
 
-    pub fn add_entry(&mut self, entry: Entry) -> LazinResult {
-        match entry {
-            Entry::Encryption(path_buf) => {
-                let hash = FileHash::hash_file(&path_buf)?;
-                self.entries.encryption.insert(path_buf, hash)
-            }
+    pub fn add_entry(&mut self, entry: Entry) -> LazinResult<Option<Entry>> {
+        let old_entry = match entry {
+            Entry::Encryption(path_buf, hash) => match self.entries.encryption.entry(path_buf) {
+                btree_map::Entry::Vacant(entry) => {
+                    entry.insert(hash);
+                    None
+                }
+                btree_map::Entry::Occupied(mut entry) => {
+                    let old_hash = entry.insert(hash);
+                    let path_buf = entry.key().clone();
+
+                    Some(Entry::Encryption(path_buf, old_hash))
+                }
+            },
         };
 
-        Ok(())
+        Ok(old_entry)
     }
 
     pub fn compare_entry(&self, entry: CompareEntry) -> EntryComparison {

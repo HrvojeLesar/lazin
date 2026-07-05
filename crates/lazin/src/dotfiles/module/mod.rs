@@ -41,8 +41,7 @@ impl AsRef<Key> for ModuleName {
 pub struct ModuleValue {
     pub source: PathBuf,
     pub target: PathBuf,
-    // TODO: rename to manage_entryption or something more descriptive
-    pub encrypt: bool,
+    pub manage_encryption: bool,
 }
 
 impl ModuleValue {
@@ -54,7 +53,7 @@ impl ModuleValue {
         Ok(Self {
             source: source.into(),
             target: expand_tilde(module_config_value.path())?,
-            encrypt: module_config_value.is_encrypted(module_config),
+            manage_encryption: module_config_value.is_encrypted(module_config),
         })
     }
 }
@@ -63,7 +62,7 @@ impl ModuleValue {
 pub struct Module {
     pub name: ModuleName,
     pub values: BTreeSet<ModuleValue>,
-    pub encrypt: Option<bool>,
+    pub manage_encryption: Option<bool>,
 }
 
 impl Module {
@@ -78,7 +77,7 @@ impl Module {
         Ok(Self {
             name: ModuleName(name.clone()),
             values,
-            encrypt: module_config.encrypt,
+            manage_encryption: module_config.encrypt,
         })
     }
 }

@@ -11,7 +11,7 @@ use crate::{
     common::Key,
     dotfiles::{
         config::{Config, RawEntry},
-        module::{Module, ModuleName, config::ModuleConfig},
+        module::{Module, ModuleName, ModuleValue, config::ModuleConfig},
         workspace::{Workspace, WorkspaceName},
     },
     error::LazinError,
@@ -108,6 +108,21 @@ impl ResolvedConfig {
                 false => None,
             })
             .collect())
+    }
+
+    pub fn encrypted_values(&self) -> impl Iterator<Item = &ModuleValue> {
+        self.modules
+            .iter()
+            .map(|(_, module)| {
+                module
+                    .values
+                    .iter()
+                    .filter_map(|v| match v.manage_encryption {
+                        true => Some(v),
+                        false => None,
+                    })
+            })
+            .flatten()
     }
 }
 
