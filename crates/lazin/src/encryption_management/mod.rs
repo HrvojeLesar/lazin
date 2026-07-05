@@ -11,6 +11,7 @@ use lazin_error::{Context, LazinResult};
 use lazin_gpg_wrapper::DecryptOptions;
 
 use crate::cache::Cache;
+mod gitignore;
 
 const GPG_EXTENSION: &str = "gpg";
 

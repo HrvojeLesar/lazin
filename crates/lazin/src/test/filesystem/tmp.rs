@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::{self, OpenOptions},
+    fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
     sync::atomic::AtomicUsize,
 };
@@ -40,6 +40,14 @@ impl TempFilepath {
 
     fn next_file() -> String {
         format!("lazin_test_file_{}", next_unique_file_ext())
+    }
+
+    pub fn file(&self) -> File {
+        fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(&self.0)
+            .expect("an open test file")
     }
 }
 
