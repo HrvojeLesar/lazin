@@ -113,16 +113,7 @@ impl ResolvedConfig {
     pub fn encrypted_values(&self) -> impl Iterator<Item = &ModuleValue> {
         self.modules
             .iter()
-            .map(|(_, module)| {
-                module
-                    .values
-                    .iter()
-                    .filter_map(|v| match v.manage_encryption {
-                        true => Some(v),
-                        false => None,
-                    })
-            })
-            .flatten()
+            .flat_map(|(_, module)| module.values.iter().filter(|v| v.manage_encryption))
     }
 }
 

@@ -2,7 +2,7 @@ use std::{
     collections::BTreeSet,
     fs,
     io::{BufWriter, Write},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use lazin_error::{Context, LazinResult};
@@ -14,10 +14,11 @@ const BEGIN_MARKER: &str = concat!(
 );
 const END_MARKER: &str = "# <<< lazin - PLEASE DO NOT MODIFY MANUALLY <<<";
 
-struct Gitignore {
-    pub managed: BTreeSet<String>,
+/// Does not load with any managed paths so they can edited on every lazin invocation
+pub struct Gitignore {
+    pub managed: BTreeSet<PathBuf>,
     user_content: String,
-    path: std::path::PathBuf,
+    path: PathBuf,
 }
 
 impl Gitignore {
