@@ -67,5 +67,7 @@ impl Display for ModuleSourcePath {
 pub struct ModuleConfig {
     #[serde(flatten)]
     pub values: BTreeMap<ModuleSourcePath, ModuleConfigValue>,
+    // TODO: move into separate struct also add to ModuleConfigValue
     pub encrypt: Option<bool>,
+    pub recipient: Option<String>,
 }

@@ -15,6 +15,7 @@ const BEGIN_MARKER: &str = concat!(
 const END_MARKER: &str = "# <<< lazin - PLEASE DO NOT MODIFY MANUALLY <<<";
 
 /// Does not load with any managed paths so they can edited on every lazin invocation
+#[derive(Debug)]
 pub struct Gitignore {
     pub managed: BTreeSet<PathBuf>,
     user_content: String,
@@ -64,7 +65,7 @@ impl Gitignore {
 
         writeln!(writer, "{}", BEGIN_MARKER).context("Failed to write begin marker")?;
         for managed in &self.managed {
-            writeln!(writer, "{}", managed).context("Failed to write managed line")?;
+            writeln!(writer, "{}", managed.display()).context("Failed to write managed line")?;
         }
         writeln!(writer, "{}", END_MARKER).context("Failed to write end marker")?;
 
@@ -81,7 +82,7 @@ impl Gitignore {
 #[cfg(test)]
 mod test {
     use std::{
-        io::{BufRead, BufReader, BufWriter, Read, Write},
+        io::{BufRead, BufReader, BufWriter, Write},
         ops::Add,
     };
 
@@ -108,7 +109,7 @@ mod test {
         let temp_file = TempFilepath::new();
         let test_managed_path = "test/test".to_string();
         let mut gitignore = Gitignore::load(temp_file.path()).expect("loaded gitignore");
-        gitignore.managed.insert(test_managed_path.clone());
+        gitignore.managed.insert(test_managed_path.clone().into());
         gitignore.save().expect("a successfull save");
 
         let file = temp_file.file();
@@ -137,7 +138,7 @@ mod test {
 
         let test_managed_path = "test/test".to_string();
         let mut gitignore = Gitignore::load(temp_file.path()).expect("loaded gitignore");
-        gitignore.managed.insert(test_managed_path.clone());
+        gitignore.managed.insert(test_managed_path.clone().into());
         gitignore.save().expect("a successfull save");
 
         let file = temp_file.file();
@@ -174,7 +175,7 @@ mod test {
 
         let test_managed_path = "test/test".to_string();
         let mut gitignore = Gitignore::load(temp_file.path()).expect("loaded gitignore");
-        gitignore.managed.insert(test_managed_path.clone());
+        gitignore.managed.insert(test_managed_path.clone().into());
         gitignore.save().expect("a successfull save");
 
         let file = temp_file.file();

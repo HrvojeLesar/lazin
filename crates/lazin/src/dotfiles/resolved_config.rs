@@ -14,6 +14,7 @@ use crate::{
         module::{Module, ModuleName, ModuleValue, config::ModuleConfig},
         workspace::{Workspace, WorkspaceName},
     },
+    encryption_management::EncryptionManager,
     error::LazinError,
 };
 
@@ -51,8 +52,8 @@ pub struct ResolvedConfig {
     pub workspaces: BTreeMap<WorkspaceName, Workspace>,
 }
 
-impl ResolvedConfig {
-    pub fn parse(config: Config) -> LazinResult<Self> {
+impl<'a> ResolvedConfig {
+    pub fn parse(config: Config, encryption_manager: EncryptionManager) -> LazinResult<Self> {
         let source_and_module_pairs = config
             .entries
             .iter()
@@ -111,9 +112,12 @@ impl ResolvedConfig {
     }
 
     pub fn encrypted_values(&self) -> impl Iterator<Item = &ModuleValue> {
-        self.modules
-            .iter()
-            .flat_map(|(_, module)| module.values.iter().filter(|v| v.manage_encryption))
+        self.modules.values().flat_map(|module| {
+            module
+                .values
+                .iter()
+                .filter(|v| v.encryption.manage_encryption)
+        })
     }
 }
 
@@ -155,7 +159,7 @@ fn validate_module_sources(
     Ok(Valid(pairs))
 }
 
-fn expand_modules(
+fn expand_modules<'a>(
     validated_module_sources: Valid<ModuleNameAndRawModule>,
 ) -> LazinResult<BTreeMap<ModuleName, Module>> {
     validated_module_sources

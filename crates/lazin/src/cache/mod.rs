@@ -44,6 +44,7 @@ struct CacheEntries {
     encryption: BTreeMap<PathBuf, FileHash>,
 }
 
+#[derive(Debug)]
 pub struct Cache {
     file_path: PathBuf,
     entries: CacheEntries,

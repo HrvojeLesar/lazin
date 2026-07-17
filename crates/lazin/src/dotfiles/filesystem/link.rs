@@ -149,7 +149,7 @@ impl Linker for DryRunLinker {
 fn link<T: Linker>(linker: &mut T, modules: &[Module]) -> LazinResult<()> {
     for module in modules {
         for module_value in &module.values {
-            let source = if module_value.manage_encryption {
+            let source = if module_value.encryption.manage_encryption {
                 try_decrypt_and_get_source(module_value)?
             } else {
                 module_value.source.as_path()
@@ -218,7 +218,7 @@ fn create_parent_directories(target: &Path) -> LazinResult<()> {
 
 fn try_decrypt_and_get_source(module_value: &ModuleValue) -> LazinResult<&Path> {
     assert!(
-        module_value.manage_encryption,
+        module_value.encryption.manage_encryption,
         "expected module value needs to have encrypt set to true"
     );
 

@@ -12,6 +12,7 @@ use std::{
     fmt::Display,
     fs,
     path::{Path, PathBuf},
+    rc::Rc,
 };
 
 pub mod config;
@@ -38,10 +39,16 @@ impl AsRef<Key> for ModuleName {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EncryptionManagement {
+    pub manage_encryption: bool,
+    pub recipient: Rc<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ModuleValue {
     pub source: PathBuf,
     pub target: PathBuf,
-    pub manage_encryption: bool,
+    pub encryption: EncryptionManagement,
 }
 
 impl ModuleValue {
@@ -49,11 +56,15 @@ impl ModuleValue {
         source: &Path,
         module_config_value: &ModuleConfigValue,
         module_config: &ModuleConfig,
+        recipient: Rc<String>,
     ) -> LazinResult<Self> {
         Ok(Self {
             source: source.into(),
             target: expand_tilde(module_config_value.path())?,
-            manage_encryption: module_config_value.is_encrypted(module_config),
+            encryption: EncryptionManagement {
+                manage_encryption: module_config_value.is_encrypted(module_config),
+                recipient,
+            },
         })
     }
 }
@@ -70,7 +81,8 @@ impl Module {
         let mut values = BTreeSet::new();
         for (source, target) in &module_config.values {
             let source = Path::new(source.0.str());
-            let expanded = expand_directory(source, target, module_config)?;
+            let expanded =
+                expand_directory(source, target, module_config, Rc::new("".to_string()))?;
             values.extend(expanded);
         }
 
@@ -86,25 +98,34 @@ fn expand_directory(
     source: &Path,
     module_config_value: &ModuleConfigValue,
     module_config: &ModuleConfig,
+    recipient: Rc<String>,
 ) -> LazinResult<BTreeSet<ModuleValue>> {
     fn walk(
         source: &Path,
         module_config_value: &ModuleConfigValue,
         out: &mut BTreeSet<ModuleValue>,
         module_config: &ModuleConfig,
+        recipient: Rc<String>,
     ) -> LazinResult<()> {
         if !source.is_dir() {
             out.insert(ModuleValue::try_new(
                 source,
                 module_config_value,
                 module_config,
+                recipient,
             )?);
         } else {
             for child in fs::read_dir(source).context("Failed to read child directory")? {
                 let child = child.context("Failed to get child directory")?.file_name();
                 let child_source = source.join(&child);
                 let child_target = module_config_value.join(&child);
-                walk(&child_source, &child_target, out, module_config)?;
+                walk(
+                    &child_source,
+                    &child_target,
+                    out,
+                    module_config,
+                    recipient.clone(),
+                )?;
             }
         }
         Ok(())
@@ -116,6 +137,7 @@ fn expand_directory(
         module_config_value,
         &mut module_values,
         module_config,
+        recipient,
     )?;
     Ok(module_values)
 }
