@@ -16,7 +16,7 @@ use crate::{
     encryption_management::gitignore::Gitignore,
 };
 
-mod gitignore;
+pub mod gitignore;
 
 const GPG_EXTENSION: &str = "gpg";
 

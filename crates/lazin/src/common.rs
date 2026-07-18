@@ -9,8 +9,13 @@ use std::{
 };
 
 use crate::{
+    cache,
     config::config,
-    dotfiles::{config::Config, resolved_config::ResolvedConfig},
+    dotfiles::{
+        config::Config,
+        resolved_config::{ResolvedConfig, ResolvedConfig2},
+    },
+    encryption_management,
     error::LazinError,
 };
 
@@ -56,7 +61,7 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     let mut files = Vec::new();
 
     for entry in fs::read_dir(directory).context("Failed to read directory")? {
-        let entry = entry.context("Faield to read directory entry")?;
+        let entry = entry.context("Failed to read directory entry")?;
         let path = entry.path();
 
         if path.extension().is_some_and(|ext| ext == "toml")
@@ -69,7 +74,7 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     Ok(files)
 }
 
-pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig> {
+pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig2> {
     let directory = directory(config_directory);
 
     match directory.try_exists() {
@@ -84,8 +89,11 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConf
     // let config = Config::parse(directory)?;
     let config = config::Config::parse(directory)?;
 
-    // ResolvedConfig::parse(config)
-    todo!()
+    let cache = cache::Cache::try_new(directory)?;
+    let gitignore = encryption_management::gitignore::Gitignore::load(".")?;
+    let encryption_manager = encryption_management::EncryptionManager::new(cache, gitignore);
+
+    ResolvedConfig2::parse(config, encryption_manager)
 }
 
 #[inline]
@@ -114,7 +122,7 @@ pub fn exit_error_with_code(code: i32) -> ! {
     exit(code)
 }
 
-pub fn check(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig> {
+pub fn check(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig2> {
     let config = parse_config(config_directory)?;
 
     Ok(config)

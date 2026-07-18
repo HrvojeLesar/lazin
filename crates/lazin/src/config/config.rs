@@ -19,8 +19,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Config {
-    modules: BTreeSet<module::Module>,
-    workspaces: BTreeSet<workspace::Workspace>,
+    pub modules: BTreeSet<module::Module>,
+    pub workspaces: BTreeSet<workspace::Workspace>,
 }
 
 #[derive(Debug, Default)]

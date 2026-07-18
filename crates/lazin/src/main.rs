@@ -7,6 +7,7 @@ mod config;
 mod dotfiles;
 mod encryption_management;
 mod error;
+mod resolve;
 
 #[cfg(test)]
 mod test;

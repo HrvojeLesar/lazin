@@ -17,6 +17,12 @@ impl Display for SourcePath {
     }
 }
 
+impl AsRef<str> for SourcePath {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Encryption {
     #[default]

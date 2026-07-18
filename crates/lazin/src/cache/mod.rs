@@ -80,7 +80,7 @@ impl Cache {
             .context("Failed to open cache file")?
             .read_to_string(&mut file_data)
             .context("Failed to read cache file")?;
-        let entries = toml::from_str(&file_data)?;
+        let entries = toml::from_str(&file_data).context("Failed to parse cache entries")?;
 
         Ok(Self {
             file_path: cache_path,
@@ -153,10 +153,14 @@ impl Cache {
 }
 
 fn init_cache(cache_file: &Path) -> LazinResult<()> {
-    fs::OpenOptions::new()
+    let file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(cache_file)?;
+
+    let mut writer = BufWriter::new(file);
+    writeln!(writer, "[encryption]")
+        .context("Failed to write encryption toml attribute to cache")?;
 
     Ok(())
 }
