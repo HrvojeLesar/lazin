@@ -1,6 +1,9 @@
 use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
 
-use serde::{Deserialize, Deserializer};
+use serde::{
+    Deserialize, Deserializer,
+    de::{self, DeserializeSeed},
+};
 
 use crate::config::Name;
 
@@ -34,8 +37,35 @@ pub enum Encryption {
     },
 }
 
+impl Encryption {
+    fn recipient(&self) -> Option<&str> {
+        match self {
+            Encryption::Disabled => None,
+            Encryption::Enabled { recipient } => Some(recipient),
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for Encryption {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        EncryptionSeed {
+            fallback_recipient: None,
+        }
+        .deserialize(deserializer)
+    }
+}
+
+struct EncryptionSeed<'a> {
+    fallback_recipient: Option<&'a str>,
+}
+
+impl<'de, 'a> DeserializeSeed<'de> for EncryptionSeed<'a> {
+    type Value = Encryption;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -49,12 +79,14 @@ impl<'de> Deserialize<'de> for Encryption {
         match (raw.encrypt, raw.recipient) {
             (false, _) => Ok(Encryption::Disabled),
             (true, Some(recipient)) => Ok(Encryption::Enabled { recipient }),
-            // TODO: change this to a module level recipient or a configured
-            // recipient variable, if none of those are set error.
-            // DeserializeSeed can be used to provide values
-            (true, None) => Err(serde::de::Error::custom(
-                "encrypt = true requires a `recipient` field",
-            )),
+            (true, None) => match self.fallback_recipient {
+                Some(recipient) => Ok(Encryption::Enabled {
+                    recipient: recipient.to_string(),
+                }),
+                None => Err(de::Error::custom(
+                    "encrypt = true requires a `recipient` field (none set here or on the module)",
+                )),
+            },
         }
     }
 }
@@ -65,44 +97,135 @@ pub struct Value {
     pub config: Config,
 }
 
-impl<'de> Deserialize<'de> for Value {
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Config {
+    pub encryption: Encryption,
+}
+
+impl<'de> Deserialize<'de> for Config {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        #[derive(Debug, Deserialize)]
-        #[serde(untagged)]
-        pub enum ValueRaw {
-            InlinePath(PathBuf),
-            CompositeValue {
-                path: PathBuf,
-                #[serde(default)]
-                config: Config,
-            },
+        ConfigSeed {
+            fallback_recipient: None,
+        }
+        .deserialize(deserializer)
+    }
+}
+
+struct ConfigSeed<'a> {
+    fallback_recipient: Option<&'a str>,
+}
+
+impl<'de, 'a> DeserializeSeed<'de> for ConfigSeed<'a> {
+    type Value = Config;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let encryption = EncryptionSeed {
+            fallback_recipient: self.fallback_recipient,
+        }
+        .deserialize(deserializer)?;
+        Ok(Config { encryption })
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Module {
+    pub name: Name,
+    pub values: BTreeMap<SourcePath, Value>,
+    pub config: Config,
+}
+
+impl<'de> Deserialize<'de> for Module {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut value = toml::Value::deserialize(deserializer)?;
+        let table = value
+            .as_table_mut()
+            .ok_or_else(|| de::Error::custom("expected `Module` to be a table"))?;
+
+        let name = table
+            .remove("name")
+            .ok_or_else(|| de::Error::custom("missing field `name`"))?;
+        let name = Name::deserialize(name).map_err(de::Error::custom)?;
+
+        let config = match table.remove("config") {
+            Some(v) => ConfigSeed {
+                fallback_recipient: None,
+            }
+            .deserialize(v)
+            .map_err(de::Error::custom)?,
+            None => Config::default(),
+        };
+
+        let module_recipient = config.encryption.recipient();
+
+        let mut values = BTreeMap::new();
+        for (key, raw_value) in table.iter() {
+            let source_path = SourcePath::deserialize(toml::Value::String(key.clone()))
+                .map_err(de::Error::custom)?;
+            let value = ValueSeed {
+                default_config: &config,
+                fallback_recipient: module_recipient,
+            }
+            .deserialize(raw_value.clone())
+            .map_err(de::Error::custom)?;
+            values.insert(source_path, value);
         }
 
-        let raw = ValueRaw::deserialize(deserializer)?;
-        Ok(match raw {
-            ValueRaw::InlinePath(path) => Self {
-                path,
-                config: Config::default(),
-            },
-            ValueRaw::CompositeValue { path, config } => Self { path, config },
+        Ok(Module {
+            name,
+            values,
+            config,
         })
     }
 }
 
-#[derive(Debug, Default, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Config {
-    #[serde(flatten)]
-    pub encryption: Encryption,
+struct ValueSeed<'a> {
+    default_config: &'a Config,
+    fallback_recipient: Option<&'a str>,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Module {
-    pub name: Name,
-    #[serde(flatten)]
-    pub values: BTreeMap<SourcePath, Value>,
-    #[serde(default)]
-    pub config: Config,
+impl<'de, 'a> DeserializeSeed<'de> for ValueSeed<'a> {
+    type Value = Value;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = toml::Value::deserialize(deserializer)?;
+
+        match raw {
+            toml::Value::String(s) => Ok(Value {
+                path: PathBuf::from(s),
+                config: self.default_config.clone(),
+            }),
+            toml::Value::Table(mut table) => {
+                let path = table
+                    .remove("path")
+                    .ok_or_else(|| de::Error::custom("missing field `path`"))?;
+                let path = PathBuf::deserialize(path).map_err(de::Error::custom)?;
+
+                let config = match table.remove("config") {
+                    Some(config_value) => ConfigSeed {
+                        fallback_recipient: self.fallback_recipient,
+                    }
+                    .deserialize(config_value)
+                    .map_err(de::Error::custom)?,
+                    None => self.default_config.clone(),
+                };
+
+                Ok(Value { path, config })
+            }
+            _ => Err(de::Error::custom(
+                "expected a path string or a table with a `path` field",
+            )),
+        }
+    }
 }

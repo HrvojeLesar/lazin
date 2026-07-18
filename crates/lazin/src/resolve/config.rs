@@ -117,8 +117,8 @@ fn validate_module_sources(
     modules.iter().try_for_each(|module| {
         match module
             .values
-            .keys()
-            .map(|source_path| match &module.config.encryption {
+            .iter()
+            .map(|(source_path, value)| match &value.config.encryption {
                 config::module::Encryption::Disabled => {
                     unencrypted_source_path_validation_pipeline(module, source_path)
                 }
