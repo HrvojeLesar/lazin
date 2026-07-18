@@ -12,13 +12,12 @@ use lazin_gpg_wrapper::{DecryptOptions, EncryptOptions};
 
 use crate::{
     cache::{Cache, Entry, FileHash},
-    dotfiles::{module::ModuleValue, resolved_config::ResolvedConfig},
     encryption_management::gitignore::Gitignore,
 };
 
 pub mod gitignore;
 
-const GPG_EXTENSION: &str = "gpg";
+pub const GPG_EXTENSION: &str = "gpg";
 
 // TODO: move this into resolving step
 // when resolving and encountering a non existent encrypted file
@@ -35,31 +34,28 @@ impl EncryptionManager {
         Self { cache, gitignore }
     }
 
-    pub fn manage_encryption(&mut self, module: &ModuleValue) -> LazinResult {
-        self.gitignore.managed.insert(module.source.clone());
+    pub fn manage_encryption(&mut self, source: &Path, recipient: &str) -> LazinResult {
+        self.gitignore.managed.insert(source.into());
         let file_hash_changed = self
             .cache
-            .add_entry(Entry::Encryption(
-                module.source.clone(),
-                FileHash::hash(&module.source)?,
-            ))?
+            .add_entry(Entry::Encryption(source.into(), FileHash::hash(source)?))?
             .is_some();
 
         if file_hash_changed {
-            self.encrypt(&module.source, &module.encryption.recipient)?;
+            self.encrypt(source, recipient)?;
         }
 
         Ok(())
     }
 
-    pub fn manage_decryption(&mut self, module: &ModuleValue) -> LazinResult {
-        self.gitignore.managed.insert(module.source.clone());
-        self.decrypt(&module.source, &module.encryption.recipient)?;
+    pub fn manage_decryption(&mut self, source: &Path) -> LazinResult {
+        self.gitignore.managed.insert(source.into());
+        self.decrypt(source)?;
 
         Ok(())
     }
 
-    fn decrypt(&mut self, file: &Path, recipient: &str) -> LazinResult<()> {
+    fn decrypt(&mut self, file: &Path) -> LazinResult<()> {
         let input = file.with_added_extension(GPG_EXTENSION);
         let output = file;
 

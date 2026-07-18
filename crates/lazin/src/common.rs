@@ -8,16 +8,7 @@ use std::{
     process::exit,
 };
 
-use crate::{
-    cache,
-    config::config,
-    dotfiles::{
-        config::Config,
-        resolved_config::{ResolvedConfig, ResolvedConfig2},
-    },
-    encryption_management,
-    error::LazinError,
-};
+use crate::{cache, config::config, encryption_management, error::LazinError, resolve};
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
 
@@ -74,7 +65,7 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     Ok(files)
 }
 
-pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig2> {
+pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<resolve::config::Config> {
     let directory = directory(config_directory);
 
     match directory.try_exists() {
@@ -93,7 +84,7 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConf
     let gitignore = encryption_management::gitignore::Gitignore::load(".")?;
     let encryption_manager = encryption_management::EncryptionManager::new(cache, gitignore);
 
-    ResolvedConfig2::parse(config, encryption_manager)
+    resolve::config::Config::parse(config, encryption_manager)
 }
 
 #[inline]
@@ -122,7 +113,7 @@ pub fn exit_error_with_code(code: i32) -> ! {
     exit(code)
 }
 
-pub fn check(config_directory: Option<&Path>) -> LazinResult<ResolvedConfig2> {
+pub fn check(config_directory: Option<&Path>) -> LazinResult<resolve::config::Config> {
     let config = parse_config(config_directory)?;
 
     Ok(config)

@@ -1,7 +1,5 @@
 //! This module defines structs that are used to configure `lazin`.
 
-use std::ops::Deref;
-
 use serde::Deserialize;
 
 pub(crate) mod config;

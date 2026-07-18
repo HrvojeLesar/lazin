@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Display, format},
-    path::Path,
-};
+use std::{fmt::Display, path::Path};
 
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},

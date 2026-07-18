@@ -68,8 +68,8 @@ impl Config {
                         Ok(RawEntry::Module(module))
                     }
                     toml::Value::Array(_) => {
-                        let modules = workspace::Modules::deserialize(value)
-                            .map_err(serde::de::Error::custom)?;
+                        let modules: Vec<Name> =
+                            Vec::deserialize(value).map_err(serde::de::Error::custom)?;
                         Ok(RawEntry::Workspace(workspace::Workspace {
                             name: Name(self.key.to_string()),
                             modules,

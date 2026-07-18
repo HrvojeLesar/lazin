@@ -53,7 +53,7 @@ pub struct ResolvedConfig {
 }
 
 impl<'a> ResolvedConfig {
-    pub fn parse(config: Config, encryption_manager: EncryptionManager) -> LazinResult<Self> {
+    pub fn parse(config: Config, _encryption_manager: EncryptionManager) -> LazinResult<Self> {
         let source_and_module_pairs = config
             .entries
             .iter()

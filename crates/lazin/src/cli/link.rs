@@ -3,11 +3,7 @@ use std::path::PathBuf;
 use clap::Args;
 use lazin_error::LazinResult;
 
-use crate::{
-    common::{self, Key},
-    dotfiles::filesystem::link::{DryRunLinker, Linker},
-    exit_error,
-};
+use crate::dotfiles::filesystem::link::Linker;
 
 #[derive(Args)]
 pub(super) struct Link {

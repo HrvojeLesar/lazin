@@ -1,8 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    fmt::Display,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fmt::Display, path::PathBuf};
 
 use serde::{Deserialize, Deserializer};
 
@@ -23,7 +19,13 @@ impl AsRef<str> for SourcePath {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+impl From<SourcePath> for PathBuf {
+    fn from(value: SourcePath) -> Self {
+        PathBuf::from(value.0)
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Encryption {
     #[default]
     Disabled,
@@ -57,30 +59,43 @@ impl<'de> Deserialize<'de> for Encryption {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-#[serde(untagged)]
-pub enum Value {
-    InlinePath(PathBuf),
-    CompositeValue {
-        path: PathBuf,
-        #[serde(default)]
-        config: Config,
-    },
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Value {
+    pub path: PathBuf,
+    pub config: Config,
 }
 
-impl Value {
-    pub fn path(&self) -> &Path {
-        match self {
-            Value::InlinePath(path_buf) => path_buf.as_path(),
-            Value::CompositeValue { path, .. } => path.as_path(),
+impl<'de> Deserialize<'de> for Value {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Debug, Deserialize)]
+        #[serde(untagged)]
+        pub enum ValueRaw {
+            InlinePath(PathBuf),
+            CompositeValue {
+                path: PathBuf,
+                #[serde(default)]
+                config: Config,
+            },
         }
+
+        let raw = ValueRaw::deserialize(deserializer)?;
+        Ok(match raw {
+            ValueRaw::InlinePath(path) => Self {
+                path,
+                config: Config::default(),
+            },
+            ValueRaw::CompositeValue { path, config } => Self { path, config },
+        })
     }
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Config {
     #[serde(flatten)]
-    encryption: Encryption,
+    pub encryption: Encryption,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
