@@ -38,7 +38,7 @@ impl Gitignore {
                         user_content_after_marker
                     );
 
-                    user_content.trim_start_matches('\n').to_string()
+                    user_content
                 }
                 _ => contents,
             }
@@ -67,10 +67,13 @@ impl Gitignore {
         for managed in &self.managed {
             writeln!(writer, "{}", managed.display()).context("Failed to write managed line")?;
         }
-        writeln!(writer, "{}", END_MARKER).context("Failed to write end marker")?;
+        write!(writer, "{}", END_MARKER).context("Failed to write end marker")?;
 
         if !self.user_content.is_empty() {
-            writeln!(writer, "{}", &self.user_content).context("Failed to write user content")?;
+            if !self.user_content.starts_with(['\n', '\r']) {
+                writeln!(writer).context("Failed to write new line")?;
+            }
+            write!(writer, "{}", &self.user_content).context("Failed to write user content")?;
         }
 
         writer.flush().context("Failed to flush gitignore writer")?;

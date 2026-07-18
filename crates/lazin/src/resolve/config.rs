@@ -9,7 +9,7 @@ use lazin_pipeline::Bind;
 
 use crate::{
     config::{self, Name},
-    encryption_management::{EncryptionManager, GPG_EXTENSION},
+    encryption_management::{EncryptionManager, GPG_EXTENSION, gitignore::Gitignore},
     error::LazinError,
     resolve::{self},
 };
@@ -44,13 +44,14 @@ impl Config {
     pub fn parse(
         config: config::config::Config,
         encryption_manager: EncryptionManager,
+        mut gitignore: Gitignore,
     ) -> LazinResult<Self> {
         let validated_modules =
             validate_module_sources(config.modules).context("Failed to validate module sources")?;
 
         let expanded_modules = validated_modules
             .into_iter()
-            .map(|m| resolve::module::Module::try_new(m))
+            .map(resolve::module::Module::try_new)
             .collect::<LazinResult<BTreeSet<resolve::module::Module>>>()?;
 
         let workspaces = config
@@ -78,6 +79,17 @@ impl Config {
                 Ok(resolve::workspace::Workspace { name, modules })
             })
             .collect::<LazinResult<BTreeSet<resolve::workspace::Workspace>>>()?;
+
+        expanded_modules.iter().for_each(|m| {
+            m.values.iter().for_each(|v| match &v.encryption {
+                resolve::module::Encryption::Disabled => {}
+                resolve::module::Encryption::Enabled { .. } => {
+                    gitignore.managed.insert(v.source.clone());
+                }
+            })
+        });
+
+        gitignore.save()?;
 
         Ok(Self {
             expanded_modules,

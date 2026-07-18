@@ -1,34 +1,35 @@
-use std::path::{Path, PathBuf};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+};
 
 use lazin_error::{Context, LazinResult};
 use lazin_gpg_wrapper::{DecryptOptions, EncryptOptions};
 
-use crate::{
-    cache::{Cache, Entry, FileHash},
-    encryption_management::gitignore::Gitignore,
-};
+use crate::cache::{Cache, Entry, FileHash};
 
 pub mod gitignore;
 
 pub const GPG_EXTENSION: &str = "gpg";
 
-// TODO: move this into linking step
-// TODO: Add a flag for skipping trying to decrypt
+// TODO: Add a flag for skipping trying to decrypt or continue linking if
+// decryption fails
 #[derive(Debug)]
 pub struct EncryptionManager {
-    cache: Cache,
-    gitignore: Gitignore,
+    cache: RefCell<Cache>,
 }
 
 impl EncryptionManager {
-    pub fn new(cache: Cache, gitignore: Gitignore) -> Self {
-        Self { cache, gitignore }
+    pub fn new(cache: Cache) -> Self {
+        Self {
+            cache: RefCell::new(cache),
+        }
     }
 
-    pub fn manage_encryption(&mut self, source: &Path, recipient: &str) -> LazinResult {
-        self.gitignore.managed.insert(source.into());
+    pub fn manage_encryption(&self, source: &Path, recipient: &str) -> LazinResult {
         let file_hash_changed = self
             .cache
+            .borrow_mut()
             .add_entry(Entry::Encryption(source.into(), FileHash::hash(source)?))?
             .is_some();
 
@@ -40,10 +41,6 @@ impl EncryptionManager {
     }
 
     pub fn manage_decryption(&self, source: &Path, override_output: Option<&Path>) -> LazinResult {
-        // TODO: rethink managing. Current system does not work, because
-        // it only gitignores files from one workspace not all
-        // configured files
-        // self.gitignore.managed.insert(source.into());
         self.decrypt(source, override_output)?;
 
         Ok(())
@@ -68,7 +65,7 @@ impl EncryptionManager {
         Ok(())
     }
 
-    fn encrypt(&mut self, file: &Path, recipient: &str) -> LazinResult<()> {
+    fn encrypt(&self, file: &Path, recipient: &str) -> LazinResult<()> {
         let input = file;
         let output = file.with_added_extension(GPG_EXTENSION);
 

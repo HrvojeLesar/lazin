@@ -82,10 +82,10 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<resolve::con
     let cache = cache::Cache::try_new(directory)?;
     // TODO: add configurable gitignore location, current directory should be default
     // or walk down to a closes directory with .git directory
-    let gitignore = encryption_management::gitignore::Gitignore::load(".")?;
-    let encryption_manager = encryption_management::EncryptionManager::new(cache, gitignore);
+    let gitignore = encryption_management::gitignore::Gitignore::load("./.gitignore")?;
+    let encryption_manager = encryption_management::EncryptionManager::new(cache);
 
-    resolve::config::Config::parse(config, encryption_manager)
+    resolve::config::Config::parse(config, encryption_manager, gitignore)
 }
 
 #[inline]
