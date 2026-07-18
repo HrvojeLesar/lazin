@@ -1,17 +1,37 @@
-use std::{collections::BTreeSet, path::Path};
+use std::{
+    collections::BTreeSet,
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use lazin_error::{Context, LazinResult};
 use lazin_pipeline::Bind;
 
 use crate::{
-    config::{self},
-    dotfiles::{
-        self, module::ModuleName, resolved_config::ValidationError, workspace::WorkspaceName,
-    },
+    config::{self, Name},
     encryption_management::{EncryptionManager, GPG_EXTENSION},
     error::LazinError,
     resolve::{self},
 };
+
+pub enum ValidationError {
+    SourcePathDoesNotExist { module_name: Name, path: PathBuf },
+}
+
+impl Display for ValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ValidationError::SourcePathDoesNotExist { module_name, path } => {
+                write!(
+                    f,
+                    "Module '{}' has a source path that could not be found: '{}'",
+                    module_name,
+                    path.display()
+                )
+            }
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Config {
@@ -46,16 +66,11 @@ impl Config {
                             .find(|m| m.name == module_name.as_ref());
                         match module {
                             Some(m) => Ok(m.name.clone()),
-                            None => {
-                                let workspace_name_string: String = name.clone().into();
-                                let module_name_string: String = module_name.into();
-
-                                Err(LazinError::ModuleNotFound(
-                                    WorkspaceName(workspace_name_string.into()),
-                                    ModuleName(module_name_string.into()),
-                                ))
-                                .context("Module not found")
-                            }
+                            None => Err(LazinError::ModuleNotFound(
+                                name.clone().into(),
+                                module_name.clone(),
+                            ))
+                            .context("Module not found"),
                         }
                     })
                     .collect::<LazinResult<BTreeSet<String>>>()?;
@@ -82,13 +97,12 @@ impl Config {
         workspace.modules.iter().fold(
             Vec::new(),
             |mut acc: Vec<&resolve::module::Module>, module_name| {
-                match self
+                if let Some(m) = self
                     .expanded_modules
                     .iter()
                     .find(|m| m.name == *module_name)
                 {
-                    Some(m) => acc.push(m),
-                    None => {}
+                    acc.push(m)
                 };
 
                 acc
@@ -130,20 +144,16 @@ fn validate_module_sources(
 fn unencrypted_source_path_validation_pipeline(
     module: &config::module::Module,
     source_path: &config::module::SourcePath,
-) -> Result<(), dotfiles::resolved_config::ValidationError> {
+) -> Result<(), ValidationError> {
     lazin_pipeline::new(source_path)
         .bind(|path| {
             let path = Path::new(path.as_ref());
             match path.exists() {
                 true => Ok(()),
-                false => {
-                    // TODO: change error so it uses Name or T instead
-                    let module_name_string: String = module.name.clone().into();
-                    Err(ValidationError::SourcePathDoesNotExist {
-                        module_name: module_name_string.into(),
-                        path: path.into(),
-                    })
-                }
+                false => Err(ValidationError::SourcePathDoesNotExist {
+                    module_name: module.name.clone(),
+                    path: path.into(),
+                }),
             }
         })
         .result()
@@ -152,7 +162,7 @@ fn unencrypted_source_path_validation_pipeline(
 fn encrypted_source_path_validation_pipeline(
     module: &config::module::Module,
     source_path: &config::module::SourcePath,
-) -> Result<(), dotfiles::resolved_config::ValidationError> {
+) -> Result<(), ValidationError> {
     let path = Path::new(source_path.as_ref());
     if path.is_dir() {
         lazin_pipeline::new(source_path).result()
@@ -163,13 +173,10 @@ fn encrypted_source_path_validation_pipeline(
                 let encrypted_file_path = path.with_added_extension(GPG_EXTENSION);
                 match (path.exists(), encrypted_file_path.exists()) {
                     (true, true) | (true, false) | (false, true) => Ok(()),
-                    (false, false) => {
-                        let module_name_string: String = module.name.clone().into();
-                        Err(ValidationError::SourcePathDoesNotExist {
-                            module_name: module_name_string.into(),
-                            path: path.into(),
-                        })
-                    }
+                    (false, false) => Err(ValidationError::SourcePathDoesNotExist {
+                        module_name: module.name.clone(),
+                        path: path.into(),
+                    }),
                 }
             })
             .result()

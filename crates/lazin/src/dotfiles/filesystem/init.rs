@@ -11,21 +11,26 @@ use crate::error::LazinError;
 const LAZIN_DEFAULT_WORKSPACE_FILE: &str = "workspace.toml";
 const LAZIN_DEFAULT_MODULE_FILE: &str = "modules.toml";
 
-const LAZIN_DEFAULT_WORKSPACE: &str = r#"# workspace_name = [
-# "module1",
-# "module2",
-# ]
+const LAZIN_DEFAULT_WORKSPACE: &str = r#"#workspace_name = [
+#   "module1",
+#   "module2",
+#]
 "#;
 
-const LAZIN_DEFAULT_MODULE: &str = r#"# [my_module]
-# encrypt = false # optional and false by default, treats files in modules as encrypted
-# source_file="/.config/my_program/source_file"
-# source_dir="/.config/source_dir"
-# "more/specific/path/to/source_file"="/.config/my_program/source_file"
-# source_file_with_attributes = {
-#   path = "/.config/my_program/source_file_with_attributes",
-#   encrypt = true # override module level encrypt
-# }
+const LAZIN_DEFAULT_MODULE: &str = r#"#[my_module]
+#config = {
+#    encrypt = false, # When setting to false, recipient field is optional
+#}
+#source_file="/.config/my_program/source_file"
+#source_dir="/.config/source_dir"
+#"more/specific/path/to/source_file"="/.config/my_program/source_file"
+#source_file_with_attributes = {
+#    path = "/.config/my_program/source_file_with_attributes",
+#    config = {
+#        encrypt = true # override module level encrypt
+#        recipient = "gpg-recipient"
+#    }
+#}
 "#;
 
 enum WriteFileState {

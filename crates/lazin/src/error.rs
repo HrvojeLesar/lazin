@@ -8,8 +8,7 @@ use codespan_reporting::{
 
 use crate::{
     common::Key,
-    config,
-    dotfiles::{module::ModuleName, workspace::WorkspaceName},
+    config::{self, Name},
 };
 
 pub type DuplicateKeys = Vec<Key>;
@@ -53,7 +52,7 @@ pub enum LazinError {
     DirectoryDoesNotExist(String),
     Custom(&'static str),
     InvalidModuleSources,
-    ModuleNotFound(WorkspaceName, ModuleName),
+    ModuleNotFound(Name, Name),
     WorkspaceNotFound(Key),
     StripPrefix(std::path::StripPrefixError),
     GpgWrapper(lazin_gpg_wrapper::Error),
