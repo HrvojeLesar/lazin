@@ -9,6 +9,7 @@ use std::{
 };
 
 use crate::{
+    config::config,
     dotfiles::{config::Config, resolved_config::ResolvedConfig},
     error::LazinError,
 };
@@ -80,9 +81,11 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<ResolvedConf
         Err(e) => return Err(LazinError::Io(e)).context("Failed to check if directory exists"),
     }
 
-    let config = Config::parse(directory)?;
+    // let config = Config::parse(directory)?;
+    let config = config::Config::parse(directory)?;
 
-    ResolvedConfig::parse(config)
+    // ResolvedConfig::parse(config)
+    todo!()
 }
 
 #[inline]

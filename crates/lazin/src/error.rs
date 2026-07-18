@@ -1,4 +1,7 @@
-use std::{fmt::Display, path::Path};
+use std::{
+    fmt::{Display, format},
+    path::Path,
+};
 
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
@@ -8,6 +11,7 @@ use codespan_reporting::{
 
 use crate::{
     common::Key,
+    config,
     dotfiles::{module::ModuleName, workspace::WorkspaceName},
 };
 
@@ -56,6 +60,7 @@ pub enum LazinError {
     WorkspaceNotFound(Key),
     StripPrefix(std::path::StripPrefixError),
     GpgWrapper(lazin_gpg_wrapper::Error),
+    DuplicateKeys2(config::config::DuplicateKeysError),
 }
 
 impl LazinError {
@@ -94,6 +99,23 @@ impl Display for LazinError {
                 write!(f, "Failed to strip prefix: {}", strip_prefix_error)
             }
             LazinError::GpgWrapper(error) => error.fmt(f),
+            LazinError::DuplicateKeys2(error) => {
+                let messages: Vec<String> = [
+                    (!error.workspaces.is_empty()).then(|| format!(
+                        "Found duplicate workspace names, please make sure all workspaces names are unique. Duplicate names: {}",
+                        error.workspaces.join(", ")
+                    )),
+                    (!error.modules.is_empty()).then(|| format!(
+                        "Found duplicate module names, please make sure all module names are unique. Duplicate names: {}",
+                        error.modules.join(", ")
+                    )),
+                ]
+                    .into_iter()
+                    .flatten()
+                    .collect();
+
+                write!(f, "{}", messages.join("\n"))
+            }
         }
     }
 }
@@ -111,6 +133,7 @@ impl std::error::Error for LazinError {
             LazinError::WorkspaceNotFound(_) => None,
             LazinError::StripPrefix(strip_prefix_error) => strip_prefix_error.source(),
             LazinError::GpgWrapper(error) => error.source(),
+            LazinError::DuplicateKeys2(_) => None,
         }
     }
 }
@@ -152,6 +175,12 @@ impl From<std::path::StripPrefixError> for LazinError {
 impl From<lazin_gpg_wrapper::Error> for LazinError {
     fn from(value: lazin_gpg_wrapper::Error) -> Self {
         Self::GpgWrapper(value)
+    }
+}
+
+impl From<config::config::DuplicateKeysError> for LazinError {
+    fn from(value: config::config::DuplicateKeysError) -> Self {
+        Self::DuplicateKeys2(value)
     }
 }
 
