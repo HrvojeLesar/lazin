@@ -77,10 +77,11 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<resolve::con
         Err(e) => return Err(LazinError::Io(e)).context("Failed to check if directory exists"),
     }
 
-    // let config = Config::parse(directory)?;
     let config = config::Config::parse(directory)?;
 
     let cache = cache::Cache::try_new(directory)?;
+    // TODO: add configurable gitignore location, current directory should be default
+    // or walk down to a closes directory with .git directory
     let gitignore = encryption_management::gitignore::Gitignore::load(".")?;
     let encryption_manager = encryption_management::EncryptionManager::new(cache, gitignore);
 
@@ -111,10 +112,4 @@ macro_rules! exit_error {
 #[allow(unused)]
 pub fn exit_error_with_code(code: i32) -> ! {
     exit(code)
-}
-
-pub fn check(config_directory: Option<&Path>) -> LazinResult<resolve::config::Config> {
-    let config = parse_config(config_directory)?;
-
-    Ok(config)
 }

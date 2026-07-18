@@ -6,7 +6,7 @@ use std::{
 
 use lazin_error::{Context, LazinResult};
 
-use crate::{config, encryption_management::EncryptionManager, error::LazinError};
+use crate::{config, error::LazinError};
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Encryption {
@@ -50,14 +50,11 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn try_new(
-        module: config::module::Module,
-        encryption_manager: &mut EncryptionManager,
-    ) -> LazinResult<Self> {
+    pub fn try_new(module: config::module::Module) -> LazinResult<Self> {
         let values = module.values.into_iter().try_fold(
             BTreeSet::new(),
             |mut acc, (source, value)| -> LazinResult<BTreeSet<Value>> {
-                expand_module(&mut acc, source.into(), value, encryption_manager)?;
+                expand_module(&mut acc, source.into(), value)?;
 
                 Ok(acc)
             },
@@ -74,48 +71,28 @@ fn expand_module(
     buffer: &mut BTreeSet<Value>,
     source: PathBuf,
     value: config::module::Value,
-    encryption_manager: &mut EncryptionManager,
 ) -> LazinResult {
     fn walk(
         buffer: &mut BTreeSet<Value>,
         source: PathBuf,
         target: PathBuf,
         config: &config::module::Config,
-        encryption_manager: &mut EncryptionManager,
     ) -> LazinResult<()> {
         if !source.is_dir() {
             let target = expand_tilde(&target)?;
-            match config.encryption {
-                config::module::Encryption::Enabled { .. } => {
-                    encryption_manager.manage_decryption(&source)?
-                }
-                _ => (),
-            }
             buffer.insert(Value::new(source, target, config.encryption.clone().into()));
         } else {
             for child in fs::read_dir(&source).context("Failed to read child directory")? {
                 let child = child.context("Failed to get child directory")?.file_name();
                 let child_source = source.join(&child);
                 let child_target = target.join(&child);
-                walk(
-                    buffer,
-                    child_source,
-                    child_target,
-                    config,
-                    encryption_manager,
-                )?;
+                walk(buffer, child_source, child_target, config)?;
             }
         }
         Ok(())
     }
 
-    walk(
-        buffer,
-        source,
-        value.path,
-        &value.config,
-        encryption_manager,
-    )
+    walk(buffer, source, value.path, &value.config)
 }
 
 fn expand_tilde(path: &Path) -> LazinResult<PathBuf> {

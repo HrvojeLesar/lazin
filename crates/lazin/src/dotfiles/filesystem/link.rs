@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use lazin_error::{Context, LazinResult};
 
+use crate::encryption_management::EncryptionManager;
 use crate::error::LazinError;
 use crate::resolve;
 
@@ -72,8 +73,12 @@ impl UnixFSLinker {
 impl Linker for UnixFSLinker {
     fn link(&mut self, workspace_name: &str) -> LazinResult<()> {
         let modules = self.config.get_workspace_modules(workspace_name);
+        let encrypt_options = LinkEncryptOptions {
+            output_override_path: None,
+            encryption_manager: &self.config.encryption_manager,
+        };
 
-        link(self, &modules)?;
+        link(self, &modules, encrypt_options)?;
 
         Ok(())
     }
@@ -117,8 +122,12 @@ impl DryRunLinker {
 impl Linker for DryRunLinker {
     fn link(&mut self, workspace_name: &str) -> LazinResult<()> {
         let modules = self.config.get_workspace_modules(workspace_name);
+        let encrypt_options = LinkEncryptOptions {
+            output_override_path: Some(Path::new("/dev/null")),
+            encryption_manager: &self.config.encryption_manager,
+        };
 
-        link(self, &modules)?;
+        link(self, &modules, encrypt_options)?;
 
         Ok(())
     }
@@ -153,14 +162,44 @@ impl Linker for DryRunLinker {
     }
 }
 
-fn link<T: Linker>(linker: &T, modules: &Vec<&resolve::module::Module>) -> LazinResult<()> {
+struct LinkEncryptOptions<'a> {
+    output_override_path: Option<&'a Path>,
+    encryption_manager: &'a EncryptionManager,
+}
+
+fn link<T: Linker>(
+    linker: &T,
+    modules: &Vec<&resolve::module::Module>,
+    encrypt_options: LinkEncryptOptions<'_>,
+) -> LazinResult<()> {
     for module in modules {
         for module_value in &module.values {
             let source = &module_value.source;
             let target = &module_value.target;
             linker.create_dir_all(target)?;
             match linker.compare_symlink(source, target)? {
-                PathComparison::TargetLinkMissing => linker.symlink(source, target)?,
+                PathComparison::TargetLinkMissing => {
+                    match module_value.encryption {
+                        resolve::module::Encryption::Disabled => {}
+                        resolve::module::Encryption::Enabled { .. } => {
+                            let decryption_source_file =
+                                EncryptionManager::get_input_file_with_extension(source);
+                            let decryption_output_file =
+                                encrypt_options.output_override_path.unwrap_or(target);
+                            lazin_logger::info!(
+                                "Decrypting file {} into {}",
+                                decryption_source_file.display(),
+                                decryption_output_file.display()
+                            );
+
+                            encrypt_options
+                                .encryption_manager
+                                .manage_decryption(source, encrypt_options.output_override_path)?
+                        }
+                    }
+
+                    linker.symlink(source, target)?
+                }
                 PathComparison::TargetAndSourceAlreadyLinked => {
                     lazin_logger::warn!(
                         "Skipping linking {} -> {} - target is already linked",

@@ -37,19 +37,20 @@ impl Display for ValidationError {
 pub struct Config {
     pub expanded_modules: BTreeSet<resolve::module::Module>,
     pub workspaces: BTreeSet<resolve::workspace::Workspace>,
+    pub encryption_manager: EncryptionManager,
 }
 
 impl Config {
     pub fn parse(
         config: config::config::Config,
-        mut encryption_manager: EncryptionManager,
+        encryption_manager: EncryptionManager,
     ) -> LazinResult<Self> {
         let validated_modules =
             validate_module_sources(config.modules).context("Failed to validate module sources")?;
 
         let expanded_modules = validated_modules
             .into_iter()
-            .map(|m| resolve::module::Module::try_new(m, &mut encryption_manager))
+            .map(|m| resolve::module::Module::try_new(m))
             .collect::<LazinResult<BTreeSet<resolve::module::Module>>>()?;
 
         let workspaces = config
@@ -81,6 +82,7 @@ impl Config {
         Ok(Self {
             expanded_modules,
             workspaces,
+            encryption_manager,
         })
     }
 

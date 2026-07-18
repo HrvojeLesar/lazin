@@ -13,7 +13,7 @@ pub(super) struct Check {
 
 impl Check {
     pub(crate) fn check(&self) -> LazinResult<()> {
-        common::check(self.directory.as_deref())?;
+        common::parse_config(self.directory.as_deref())?;
 
         Ok(())
     }

@@ -1,11 +1,4 @@
-// Source is an encrypted file
-// How to get files to encrypt in the first place ???
-//      Define a file source=target
-//      source is the original file, this creates a source.gpg file
-//      add source to .gitignore
-// Config resolver should try to decrypt source files
-
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use lazin_error::{Context, LazinResult};
 use lazin_gpg_wrapper::{DecryptOptions, EncryptOptions};
@@ -19,10 +12,8 @@ pub mod gitignore;
 
 pub const GPG_EXTENSION: &str = "gpg";
 
-// TODO: move this into resolving step
-// when resolving and encountering a non existent encrypted file
-// try decrypting file.gpg, it this fails then validation should fail.
-// Add a flag for skipping trying to decrypt
+// TODO: move this into linking step
+// TODO: Add a flag for skipping trying to decrypt
 #[derive(Debug)]
 pub struct EncryptionManager {
     cache: Cache,
@@ -48,16 +39,19 @@ impl EncryptionManager {
         Ok(())
     }
 
-    pub fn manage_decryption(&mut self, source: &Path) -> LazinResult {
-        self.gitignore.managed.insert(source.into());
-        self.decrypt(source)?;
+    pub fn manage_decryption(&self, source: &Path, override_output: Option<&Path>) -> LazinResult {
+        // TODO: rethink managing. Current system does not work, because
+        // it only gitignores files from one workspace not all
+        // configured files
+        // self.gitignore.managed.insert(source.into());
+        self.decrypt(source, override_output)?;
 
         Ok(())
     }
 
-    fn decrypt(&mut self, file: &Path) -> LazinResult<()> {
-        let input = file.with_added_extension(GPG_EXTENSION);
-        let output = file;
+    fn decrypt(&self, file: &Path, override_output: Option<&Path>) -> LazinResult<()> {
+        let input = Self::get_input_file_with_extension(file);
+        let output = override_output.unwrap_or(file);
 
         lazin_gpg_wrapper::decrypt_file(DecryptOptions {
             input: &input,
@@ -92,5 +86,9 @@ impl EncryptionManager {
         })?;
 
         Ok(())
+    }
+
+    pub fn get_input_file_with_extension(file: &Path) -> PathBuf {
+        file.with_added_extension(GPG_EXTENSION)
     }
 }

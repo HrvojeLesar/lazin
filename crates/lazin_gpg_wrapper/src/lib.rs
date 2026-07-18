@@ -1,4 +1,8 @@
-use std::{fmt::Display, path::Path, process::Command};
+use std::{
+    fmt::Display,
+    path::Path,
+    process::{Command, Stdio},
+};
 
 #[derive(Debug)]
 pub enum Error {
@@ -50,6 +54,7 @@ pub struct DecryptOptions<'a> {
 pub fn is_gpg_available() -> Result<(), Error> {
     Command::new("gpg")
         .arg("--version")
+        .stdout(Stdio::null())
         .status()
         .map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => Error::GpgNotFound,
@@ -87,7 +92,7 @@ pub fn decrypt_file(options: DecryptOptions) -> Result<(), Error> {
     is_gpg_available()?;
 
     let result = Command::new("gpg")
-        .args(["--decrypt", "--batch", "--yes"])
+        .args(["--decrypt", "--batch", "--yes", "--quiet"])
         .arg("--output")
         .arg(options.output)
         .arg(options.input)

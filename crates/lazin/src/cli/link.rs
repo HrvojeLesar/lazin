@@ -20,7 +20,7 @@ pub(super) struct Link {
 
 impl Link {
     pub(super) fn link(&self) -> LazinResult<()> {
-        let config = common::check(self.directory.as_deref())?;
+        let config = common::parse_config(self.directory.as_deref())?;
         let workspace_name = &self.workspace;
 
         if !config.contains_workspace(workspace_name) {
