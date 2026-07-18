@@ -68,6 +68,33 @@ impl Config {
             workspaces,
         })
     }
+
+    pub fn contains_workspace(&self, name: &str) -> bool {
+        self.workspaces.iter().any(|w| w.name == name)
+    }
+
+    pub fn get_workspace_modules(&self, name: &str) -> Vec<&resolve::module::Module> {
+        let workspace = match self.workspaces.iter().find(|w| w.name == name) {
+            Some(w) => w,
+            None => return Vec::new(),
+        };
+
+        workspace.modules.iter().fold(
+            Vec::new(),
+            |mut acc: Vec<&resolve::module::Module>, module_name| {
+                match self
+                    .expanded_modules
+                    .iter()
+                    .find(|m| m.name == *module_name)
+                {
+                    Some(m) => acc.push(m),
+                    None => {}
+                };
+
+                acc
+            },
+        )
+    }
 }
 
 fn validate_module_sources(

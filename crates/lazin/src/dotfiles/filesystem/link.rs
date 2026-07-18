@@ -1,10 +1,11 @@
+use std::cell::RefCell;
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use lazin_error::{Context, LazinResult};
 
-use crate::dotfiles::module::{Module, ModuleValue};
-use crate::{common::Key, dotfiles::resolved_config::ResolvedConfig, error::LazinError};
+use crate::error::LazinError;
+use crate::resolve;
 
 enum FileType {
     Link,
@@ -23,8 +24,8 @@ pub enum PathComparison {
 }
 
 pub trait Linker {
-    fn link(&mut self, workspace_name: &Key) -> LazinResult<()>;
-    fn create_dir_all(&mut self, path: &Path) -> LazinResult<()>;
+    fn link(&mut self, workspace_name: &str) -> LazinResult<()>;
+    fn create_dir_all(&self, path: &Path) -> LazinResult<()>;
 
     // TODO: Fix failures on invalid symlinks
     fn compare_symlink(&self, source: &Path, target: &Path) -> LazinResult<PathComparison> {
@@ -54,34 +55,34 @@ pub trait Linker {
 
         Ok(PathComparison::Unknown)
     }
-    fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()>;
+    fn symlink(&self, source: &Path, target: &Path) -> LazinResult<()>;
 }
 
 #[cfg(unix)]
 pub struct UnixFSLinker {
-    config: ResolvedConfig,
+    config: resolve::config::Config,
 }
 impl UnixFSLinker {
-    pub(crate) fn new(config: ResolvedConfig) -> Self {
+    pub(crate) fn new(config: resolve::config::Config) -> Self {
         Self { config }
     }
 }
 
 #[cfg(unix)]
 impl Linker for UnixFSLinker {
-    fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
-        let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
+    fn link(&mut self, workspace_name: &str) -> LazinResult<()> {
+        let modules = self.config.get_workspace_modules(workspace_name);
 
         link(self, &modules)?;
 
         Ok(())
     }
 
-    fn create_dir_all(&mut self, path: &Path) -> LazinResult<()> {
+    fn create_dir_all(&self, path: &Path) -> LazinResult<()> {
         create_parent_directories(path)
     }
 
-    fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {
+    fn symlink(&self, source: &Path, target: &Path) -> LazinResult<()> {
         use std::os::unix::fs::symlink;
 
         let abolute_source =
@@ -100,61 +101,63 @@ impl Linker for UnixFSLinker {
 }
 
 pub struct DryRunLinker {
-    config: ResolvedConfig,
-    filesystem: BTreeMap<PathBuf, FileType>,
+    config: resolve::config::Config,
+    filesystem: RefCell<BTreeMap<PathBuf, FileType>>,
 }
 
 impl DryRunLinker {
-    pub fn new(config: ResolvedConfig) -> Self {
+    pub fn new(config: resolve::config::Config) -> Self {
         Self {
             config,
-            filesystem: BTreeMap::default(),
+            filesystem: RefCell::default(),
         }
     }
 }
 
 impl Linker for DryRunLinker {
-    fn link(&mut self, workspace_name: &Key) -> LazinResult<()> {
-        let modules = self.config.get_modules_from_workspace_key(workspace_name)?;
+    fn link(&mut self, workspace_name: &str) -> LazinResult<()> {
+        let modules = self.config.get_workspace_modules(workspace_name);
 
         link(self, &modules)?;
 
         Ok(())
     }
 
-    fn create_dir_all(&mut self, mut path: &Path) -> LazinResult<()> {
+    fn create_dir_all(&self, mut path: &Path) -> LazinResult<()> {
         if !path.is_dir() {
             return Ok(());
         }
 
         lazin_logger::info!("Creating directory: {}", path.display());
-        self.filesystem.insert(path.into(), FileType::Directory);
+        self.filesystem
+            .borrow_mut()
+            .insert(path.into(), FileType::Directory);
         while path.parent().is_some() {
             path = path
                 .parent()
                 .ok_or(LazinError::Custom("failed to get path parent"))?;
-            self.filesystem.insert(path.into(), FileType::Directory);
+            self.filesystem
+                .borrow_mut()
+                .insert(path.into(), FileType::Directory);
         }
 
         Ok(())
     }
 
-    fn symlink(&mut self, source: &Path, target: &Path) -> LazinResult<()> {
+    fn symlink(&self, source: &Path, target: &Path) -> LazinResult<()> {
         lazin_logger::info!("Linking {} -> {}", source.display(), target.display());
-        self.filesystem.insert(source.into(), FileType::Link);
+        self.filesystem
+            .borrow_mut()
+            .insert(source.into(), FileType::Link);
         Ok(())
     }
 }
 
-fn link<T: Linker>(linker: &mut T, modules: &[Module]) -> LazinResult<()> {
+fn link<T: Linker>(linker: &T, modules: &Vec<&resolve::module::Module>) -> LazinResult<()> {
     for module in modules {
         for module_value in &module.values {
-            let source = if module_value.encryption.manage_encryption {
-                try_decrypt_and_get_source(module_value)?
-            } else {
-                module_value.source.as_path()
-            };
-            let target = module_value.target.as_path();
+            let source = &module_value.source;
+            let target = &module_value.target;
             linker.create_dir_all(target)?;
             match linker.compare_symlink(source, target)? {
                 PathComparison::TargetLinkMissing => linker.symlink(source, target)?,
@@ -214,13 +217,4 @@ fn create_parent_directories(target: &Path) -> LazinResult<()> {
     }
 
     Ok(())
-}
-
-fn try_decrypt_and_get_source(module_value: &ModuleValue) -> LazinResult<&Path> {
-    assert!(
-        module_value.encryption.manage_encryption,
-        "expected module value needs to have encrypt set to true"
-    );
-
-    todo!()
 }

@@ -28,9 +28,9 @@ impl From<config::module::Encryption> for Encryption {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Value {
-    source: PathBuf,
-    target: PathBuf,
-    encryption: Encryption,
+    pub source: PathBuf,
+    pub target: PathBuf,
+    pub encryption: Encryption,
 }
 
 impl Value {
