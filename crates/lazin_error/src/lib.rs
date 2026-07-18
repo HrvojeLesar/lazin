@@ -32,27 +32,15 @@ impl Display for LazinError {
 }
 
 #[derive(Debug)]
-pub struct LazinContextError<C, E>
-where
-    C: Display + Send + Sync + 'static,
-{
+struct LazinContextError<C, E> {
     context: C,
     error: E,
 }
 
-impl<C, E> LazinContextError<C, E>
-where
-    C: Display + Send + Sync + 'static,
-{
-    pub fn new(context: C, error: E) -> Self {
-        Self { context, error }
-    }
-}
-
 impl<C, E> Display for LazinContextError<C, E>
 where
-    C: Display + Send + Sync + 'static,
-    E: StdError + Display + Send + Sync + 'static,
+    C: Display,
+    E: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.context, self.error)
@@ -61,12 +49,9 @@ where
 
 impl<C, E> StdError for LazinContextError<C, E>
 where
-    C: Display + Debug + Send + Sync + 'static,
-    E: StdError + Display + Send + Sync + 'static,
+    C: Debug + Display,
+    E: Debug + Display,
 {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        None
-    }
 }
 
 pub trait Context<T> {
@@ -80,7 +65,7 @@ pub trait Context<T> {
 
 impl<T, E> Context<T> for Result<T, E>
 where
-    E: StdError + Display + Send + Sync + 'static,
+    E: Display + Debug + Send + Sync + 'static,
 {
     fn context<C>(self, context: C) -> Result<T, LazinError>
     where
