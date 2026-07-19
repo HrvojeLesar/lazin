@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 
 const CACHE_FILE: &str = "lazin.cache";
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FileHash(String);
 
 impl FileHash {

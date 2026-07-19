@@ -26,18 +26,28 @@ impl EncryptionManager {
         }
     }
 
-    pub fn manage_encryption(&self, source: &Path, recipient: &str) -> LazinResult {
-        let file_hash_changed = self
+    pub fn manage_encryption(&self, source: &Path, recipient: &str) -> LazinResult<bool> {
+        let file_hash = FileHash::hash(source)?;
+        let previous_entry = self
             .cache
             .borrow_mut()
-            .add_entry(Entry::Encryption(source.into(), FileHash::hash(source)?))?
-            .is_some();
+            .add_entry(Entry::Encryption(source.into(), file_hash.clone()))?;
 
-        if file_hash_changed {
+        let file_hash_changed = match previous_entry {
+            Some(e) => match e {
+                Entry::Encryption(_, old_hash) => file_hash != old_hash,
+            },
+            None => true,
+        };
+
+        let did_encrypt_file = if file_hash_changed || !Self::encrypted_file_exists(source) {
             self.encrypt(source, recipient)?;
-        }
+            true
+        } else {
+            false
+        };
 
-        Ok(())
+        Ok(did_encrypt_file)
     }
 
     pub fn manage_decryption(&self, source: &Path, override_output: Option<&Path>) -> LazinResult {
@@ -87,5 +97,13 @@ impl EncryptionManager {
 
     pub fn get_input_file_with_extension(file: &Path) -> PathBuf {
         file.with_added_extension(GPG_EXTENSION)
+    }
+
+    pub fn flush_cache(&self) -> LazinResult {
+        self.cache.borrow().save()
+    }
+
+    fn encrypted_file_exists(file: &Path) -> bool {
+        Self::get_input_file_with_extension(file).exists()
     }
 }

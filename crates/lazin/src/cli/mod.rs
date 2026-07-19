@@ -7,6 +7,7 @@ pub(super) mod check;
 pub(super) mod init;
 pub(super) mod link;
 pub(super) mod list_workspaces;
+pub(super) mod manage_encryption;
 pub(super) mod version;
 
 #[derive(Subcommand)]
@@ -15,6 +16,7 @@ enum Commands {
     Check(check::Check),
     Link(link::Link),
     Workspaces(list_workspaces::Workspaces),
+    Encryption(manage_encryption::ManageEncryption),
 }
 
 #[derive(Parser)]
@@ -26,12 +28,6 @@ pub struct Cli {
     commands: Option<Commands>,
     #[arg(short = 'q', long = "quiet", help = "Suppress all non error output")]
     quiet: bool,
-    #[arg(
-        short = 'l',
-        long = "list-workspaces",
-        help = "List configured workspace keys"
-    )]
-    list_workspaces: bool,
 }
 
 impl Cli {
@@ -52,6 +48,7 @@ impl Cli {
             Some(Commands::Check(cmd)) => cmd.check(),
             Some(Commands::Link(cmd)) => cmd.link(),
             Some(Commands::Workspaces(cmd)) => cmd.list_workspaces(),
+            Some(Commands::Encryption(cmd)) => cmd.manage(),
             None => Ok(()),
         };
 

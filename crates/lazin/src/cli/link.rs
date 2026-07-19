@@ -9,6 +9,7 @@ use crate::{
     filesystem::link::{DryRunLinker, Linker},
 };
 
+/// Link a selected workspace modules
 #[derive(Args)]
 pub(super) struct Link {
     workspace: String,

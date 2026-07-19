@@ -43,7 +43,10 @@ mod test {
     #[test]
     fn defaults_to_lazin_directory() {
         let init = Init { directory: None };
-        assert_eq!(init.default_or_provided_directory(), common::DEFAULT_DIRECTORY);
+        assert_eq!(
+            init.default_or_provided_directory(),
+            common::DEFAULT_DIRECTORY
+        );
     }
 
     #[test]
@@ -51,7 +54,10 @@ mod test {
         let init = Init {
             directory: Some(PathBuf::from("/some/path")),
         };
-        assert_eq!(init.default_or_provided_directory(), Path::new("/some/path"));
+        assert_eq!(
+            init.default_or_provided_directory(),
+            Path::new("/some/path")
+        );
     }
 
     #[test]
