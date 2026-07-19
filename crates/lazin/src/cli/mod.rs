@@ -3,17 +3,18 @@ use lazin_error::LazinResult;
 
 use crate::{common, exit_error};
 
-pub mod check;
-pub mod init;
-pub mod link;
-pub mod list_workspaces;
-pub mod version;
+pub(super) mod check;
+pub(super) mod init;
+pub(super) mod link;
+pub(super) mod list_workspaces;
+pub(super) mod version;
 
 #[derive(Subcommand)]
 enum Commands {
     Init(init::Init),
     Check(check::Check),
     Link(link::Link),
+    Workspaces(list_workspaces::Workspaces),
 }
 
 #[derive(Parser)]
@@ -41,9 +42,6 @@ impl Cli {
             version::version();
             common::exit_success();
         }
-        if cli.list_workspaces {
-            handle_error(list_workspaces::list_workspaces(None))
-        }
 
         if cli.quiet {
             lazin_logger::quiet(true);
@@ -53,6 +51,7 @@ impl Cli {
             Some(Commands::Init(cmd)) => cmd.init(),
             Some(Commands::Check(cmd)) => cmd.check(),
             Some(Commands::Link(cmd)) => cmd.link(),
+            Some(Commands::Workspaces(cmd)) => cmd.list_workspaces(),
             None => Ok(()),
         };
 

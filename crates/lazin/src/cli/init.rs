@@ -21,7 +21,7 @@ pub(super) struct Init {
 
 impl Init {
     pub(crate) fn init(&self) -> LazinResult<()> {
-        let directory = self.directory();
+        let directory = self.default_or_provided_directory();
 
         init_directory(directory)?;
         init_default_config(directory)?;
@@ -29,7 +29,7 @@ impl Init {
         Ok(())
     }
 
-    fn directory(&self) -> &Path {
+    fn default_or_provided_directory(&self) -> &Path {
         common::directory(self.directory.as_deref())
     }
 }
@@ -43,7 +43,7 @@ mod test {
     #[test]
     fn defaults_to_lazin_directory() {
         let init = Init { directory: None };
-        assert_eq!(init.directory(), common::DEFAULT_DIRECTORY);
+        assert_eq!(init.default_or_provided_directory(), common::DEFAULT_DIRECTORY);
     }
 
     #[test]
@@ -51,7 +51,7 @@ mod test {
         let init = Init {
             directory: Some(PathBuf::from("/some/path")),
         };
-        assert_eq!(init.directory(), Path::new("/some/path"));
+        assert_eq!(init.default_or_provided_directory(), Path::new("/some/path"));
     }
 
     #[test]

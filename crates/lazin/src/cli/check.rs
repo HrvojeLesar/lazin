@@ -15,6 +15,8 @@ impl Check {
     pub(crate) fn check(&self) -> LazinResult<()> {
         common::parse_config(self.directory.as_deref())?;
 
+        lazin_logger::info!("Configuration is valid");
+
         Ok(())
     }
 }

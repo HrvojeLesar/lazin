@@ -208,14 +208,14 @@ fn link<T: Linker>(
                     )
                 }
                 PathComparison::TargetIsAnExistingFile => {
-                    lazin_logger::warn!(
+                    lazin_logger::error!(
                         "Skipping linking {} -> {} - target is an existing file",
                         source.display(),
                         target.display()
                     )
                 }
                 PathComparison::TargetIsAnExistingDirectory => {
-                    lazin_logger::warn!(
+                    lazin_logger::error!(
                         "Skipping linking {} -> {} - target is an existing directory",
                         source.display(),
                         target.display()
