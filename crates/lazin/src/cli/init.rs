@@ -1,6 +1,6 @@
 use crate::{
     common,
-    dotfiles::filesystem::init::{init_default_config, init_directory},
+    filesystem::init::{init_default_config, init_directory},
 };
 use clap::Args;
 use lazin_error::LazinResult;

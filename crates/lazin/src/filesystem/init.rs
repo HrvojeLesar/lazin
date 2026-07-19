@@ -97,7 +97,7 @@ mod test {
     use std::fs;
 
     use crate::{
-        dotfiles::filesystem::init::{init_default_config, init_directory},
+        filesystem::init::{init_default_config, init_directory},
         test::filesystem::tmp::TempDir,
     };
 

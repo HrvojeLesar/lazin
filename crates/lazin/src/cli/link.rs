@@ -5,8 +5,8 @@ use lazin_error::LazinResult;
 
 use crate::{
     common::{self},
-    dotfiles::filesystem::link::{DryRunLinker, Linker},
     exit_error,
+    filesystem::link::{DryRunLinker, Linker},
 };
 
 #[derive(Args)]
@@ -33,7 +33,7 @@ impl Link {
         } else {
             #[cfg(unix)]
             {
-                use crate::dotfiles::filesystem::link::UnixFSLinker;
+                use crate::filesystem::link::UnixFSLinker;
 
                 let mut linker = UnixFSLinker::new(config);
                 linker.link(workspace_name)?;

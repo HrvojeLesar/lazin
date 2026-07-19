@@ -4,9 +4,9 @@ mod cache;
 mod cli;
 mod common;
 mod config;
-mod dotfiles;
 mod encryption_management;
 mod error;
+mod filesystem;
 mod resolve;
 
 #[cfg(test)]
