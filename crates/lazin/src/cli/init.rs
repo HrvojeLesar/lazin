@@ -14,7 +14,7 @@ pub(super) struct Init {
     #[arg(
         short = 'd',
         long = "directory",
-        help = "directory to write the example configuration in"
+        help = "Directory to initialize configuration in"
     )]
     directory: Option<PathBuf>,
 }

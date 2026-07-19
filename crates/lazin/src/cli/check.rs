@@ -7,7 +7,7 @@ use std::path::PathBuf;
 /// Check configuration validity
 #[derive(Args)]
 pub(super) struct Check {
-    #[arg(short = 'd', long = "directory", help = "directory to validate")]
+    #[arg(short = 'd', long = "directory", help = "Directory to validate")]
     directory: Option<PathBuf>,
 }
 

@@ -17,7 +17,7 @@ pub(super) struct ManageEncryption {
     #[arg(
         short = 'r',
         long = "decrypt",
-        help = "decrypt files from all configured modules"
+        help = "Decrypt files from all configured modules"
     )]
     decrypt: bool,
 }

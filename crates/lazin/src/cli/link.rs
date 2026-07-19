@@ -9,13 +9,14 @@ use crate::{
     filesystem::link::{DryRunLinker, Linker},
 };
 
-/// Link a selected workspace modules
+/// Link selected workspace modules, by default this performs
+/// a dry run, use `-l` to link files on disk
 #[derive(Args)]
 pub(super) struct Link {
     workspace: String,
-    #[arg(short = 'd', long = "directory", help = "directory to validate")]
+    #[arg(short = 'd', long = "directory", help = "Directory to validate")]
     directory: Option<PathBuf>,
-    #[arg(short = 'l', long = "link", help = "actually link")]
+    #[arg(short = 'l', long = "link", help = "Link selected workspace")]
     link: bool,
 }
 

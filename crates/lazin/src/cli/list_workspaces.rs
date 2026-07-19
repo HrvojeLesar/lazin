@@ -10,13 +10,13 @@ pub(super) struct Workspaces {
     #[arg(
         short = 'd',
         long = "directory",
-        help = "lists workspaces configured in provided directory"
+        help = "Lists workspaces configured in provided directory"
     )]
     directory: Option<PathBuf>,
     #[arg(
         short = 'm',
         long = "modules",
-        help = "include a list of configured modules for the workspace"
+        help = "Include a list of configured modules for the workspace"
     )]
     include_modules: bool,
 }
