@@ -6,7 +6,7 @@ use std::{
 
 use lazin_error::{Context, LazinResult};
 
-use crate::{config, error::LazinError};
+use crate::{config, encryption_management::GPG_EXTENSION, error::LazinError};
 
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Encryption {
@@ -79,7 +79,18 @@ fn expand_module(
         config: &config::module::Config,
     ) -> LazinResult<()> {
         if !source.is_dir() {
-            let target = expand_tilde(&target)?;
+            // When expanding encrypted directories files ending with .gpg
+            // get used as source but they shouldn't be.
+            // Source is modified and removes .gpg
+            let mut source = source;
+            let mut target = expand_tilde(&target)?;
+            if let Some(extension) = source.extension()
+                && extension == GPG_EXTENSION
+            {
+                source.set_extension("");
+                target.set_extension("");
+            }
+
             buffer.insert(Value::new(source, target, config.encryption.clone().into()));
         } else {
             for child in fs::read_dir(&source).context("Failed to read child directory")? {

@@ -77,7 +77,7 @@ impl EncryptionManager {
 
     fn encrypt(&self, file: &Path, recipient: &str) -> LazinResult<()> {
         let input = file;
-        let output = file.with_added_extension(GPG_EXTENSION);
+        let output = Self::get_input_file_with_extension(file);
 
         lazin_gpg_wrapper::encrypt_file(EncryptOptions {
             input,
