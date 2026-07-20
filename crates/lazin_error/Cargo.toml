@@ -6,8 +6,7 @@ authors = ["Hrvoje Lesar <hrvoje.lesar1@hotmail.com>"]
 description = "Simple anyhow like errors"
 license = "MIT"
 repository = "https://github.com/HrvojeLesar/lazin"
-keywords = ["decryption", "dotfiles", "encryption", "file linking", "manager"]
-categories = ["command-line-utilities"]
+keywords = ["errors"]
 homepage = "https://github.com/HrvojeLesar/lazin"
 
 [dependencies]
