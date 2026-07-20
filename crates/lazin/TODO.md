@@ -5,8 +5,8 @@ Expected features
 ---------------
 
 - [ ] Multiple configuration
-    - [ ] Define dotfiles to copy for each configuration
-    - [ ] Define naming
+    - [x] Define dotfiles to copy for each configuration
+    - [x] Define naming
         - `Workspace`: A named collection of `Module`s to be
         written to config folders
         - `Module`: A named collecation of `Config pairs`
@@ -16,9 +16,9 @@ Expected features
         or just a sub attribute in module definition.
         Defines custom properties for a desired module,
         or a single module pair
-- [ ] Encryption/Decryption
-    - [ ] Allow users to encrypt desired files
+- [x] Encryption/Decryption
+    - [x] Allow users to encrypt desired files
     - [ ] Check git or cache a hash of the original file
-    - [ ] Automatic `.gitignore` management for encrypted source
+    - [x] Automatic `.gitignore` management for encrypted source
     files (only if git repository is detected)
 - [ ] Custom config language, toml like with @Attributes

@@ -2,5 +2,11 @@
 name = "lazin_logger"
 version = "0.1.0"
 edition = "2024"
+authors = ["Hrvoje Lesar <hrvoje.lesar1@hotmail.com>"]
+description = "Simple implementation of a stdout logger"
+license = "MIT"
+repository = "https://github.com/HrvojeLesar/lazin"
+keywords = ["logger"]
+homepage = "https://github.com/HrvojeLesar/lazin"
 
 [dependencies]

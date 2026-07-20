@@ -2,5 +2,12 @@
 name = "lazin_error"
 version = "0.1.0"
 edition = "2024"
+authors = ["Hrvoje Lesar <hrvoje.lesar1@hotmail.com>"]
+description = "Simple anyhow like errors"
+license = "MIT"
+repository = "https://github.com/HrvojeLesar/lazin"
+keywords = ["decryption", "dotfiles", "encryption", "file linking", "manager"]
+categories = ["command-line-utilities"]
+homepage = "https://github.com/HrvojeLesar/lazin"
 
 [dependencies]

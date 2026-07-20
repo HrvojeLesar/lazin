@@ -2,5 +2,11 @@
 name = "lazin_gpg_wrapper"
 version = "0.1.0"
 edition = "2024"
+authors = ["Hrvoje Lesar <hrvoje.lesar1@hotmail.com>"]
+description = "Tiny wrapper around `gpg` command line utility"
+license = "MIT"
+repository = "https://github.com/HrvojeLesar/lazin"
+keywords = ["decryption", "encryption", "gpg"]
+homepage = "https://github.com/HrvojeLesar/lazin"
 
 [dependencies]
