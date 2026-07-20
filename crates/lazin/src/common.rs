@@ -1,37 +1,14 @@
 use lazin_error::{Context, LazinResult};
-use serde::Deserialize;
 use std::{
-    fmt::Display,
     fs,
     io::ErrorKind,
     path::{Path, PathBuf},
     process::exit,
 };
 
-use crate::{cache, config::config, encryption_management, error::LazinError, resolve};
+use crate::{cache, config, encryption_management, error::LazinError, resolve};
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
-
-#[derive(Debug, Clone, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Key(String);
-
-impl Key {
-    pub fn str(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
-impl From<String> for Key {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
-}
-
-impl Display for Key {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
 
 pub struct TomlFile {
     pub path: PathBuf,

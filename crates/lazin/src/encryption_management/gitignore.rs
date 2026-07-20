@@ -94,8 +94,8 @@ mod test {
         test::filesystem::tmp::TempFilepath,
     };
 
-    const LAZIN_V0_BEGIN: &str = "# >>> lazin v0 - PLEASE DO NOT MODIFY MANUALLY >>>\n";
-    const LAZIN_V0_END: &str = "# <<< lazin - PLEASE DO NOT MODIFY MANUALLY <<<\n";
+    const LAZIN_V1_BEGIN: &str = "# >>> lazin v1 - PLEASE DO NOT MODIFY MANUALLY >>>\n";
+    const LAZIN_V1_END: &str = "# <<< lazin - PLEASE DO NOT MODIFY MANUALLY <<<\n";
 
     fn expect_read<R: std::io::Read>(
         reader: &mut BufReader<R>,
@@ -119,9 +119,13 @@ mod test {
         let mut buffer = String::new();
         let mut reader = BufReader::new(file);
 
-        expect_read(&mut reader, &mut buffer, LAZIN_V0_BEGIN);
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_BEGIN);
         expect_read(&mut reader, &mut buffer, &test_managed_path.add("\n"));
-        expect_read(&mut reader, &mut buffer, LAZIN_V0_END);
+        expect_read(
+            &mut reader,
+            &mut buffer,
+            LAZIN_V1_END.strip_suffix('\n').unwrap(),
+        );
     }
 
     #[test]
@@ -148,9 +152,9 @@ mod test {
         let mut buffer = String::new();
         let mut reader = BufReader::new(file);
 
-        expect_read(&mut reader, &mut buffer, LAZIN_V0_BEGIN);
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_BEGIN);
         expect_read(&mut reader, &mut buffer, &test_managed_path.add("\n"));
-        expect_read(&mut reader, &mut buffer, LAZIN_V0_END);
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_END);
         expect_read(&mut reader, &mut buffer, &user_file_1.add("\n"));
         expect_read(&mut reader, &mut buffer, &user_file_2.add("\n"));
     }
@@ -185,9 +189,9 @@ mod test {
         let mut buffer = String::new();
         let mut reader = BufReader::new(file);
 
-        expect_read(&mut reader, &mut buffer, LAZIN_V0_BEGIN);
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_BEGIN);
         expect_read(&mut reader, &mut buffer, &test_managed_path.add("\n"));
-        expect_read(&mut reader, &mut buffer, LAZIN_V0_END);
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_END);
         expect_read(&mut reader, &mut buffer, &user_file_1.add("\n"));
         expect_read(&mut reader, &mut buffer, &user_file_2.add("\n"));
     }

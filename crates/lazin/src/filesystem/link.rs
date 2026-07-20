@@ -8,6 +8,7 @@ use crate::encryption_management::EncryptionManager;
 use crate::error::LazinError;
 use crate::resolve;
 
+#[allow(unused)]
 enum FileType {
     Link,
     Directory,

@@ -54,16 +54,6 @@ pub enum Entry {
     Encryption(PathBuf, FileHash),
 }
 
-pub enum CompareEntry {
-    Encryption(PathBuf, FileHash),
-}
-
-pub enum EntryComparison {
-    Equal,
-    NotEqual,
-    NotFound,
-}
-
 impl Cache {
     pub fn try_new<P: AsRef<Path>>(cache_dir: P) -> LazinResult<Self> {
         let cache_path = cache_dir.as_ref().join(CACHE_FILE);
@@ -110,12 +100,6 @@ impl Cache {
         Ok(())
     }
 
-    pub fn prune_entries(&mut self, entries_to_keep: &[PathBuf]) {
-        self.entries
-            .encryption
-            .retain(|k, _| entries_to_keep.contains(k));
-    }
-
     pub fn add_entry(&mut self, entry: Entry) -> LazinResult<Option<Entry>> {
         let old_entry = match entry {
             Entry::Encryption(path_buf, hash) => match self.entries.encryption.entry(path_buf) {
@@ -133,22 +117,6 @@ impl Cache {
         };
 
         Ok(old_entry)
-    }
-
-    pub fn compare_entry(&self, entry: CompareEntry) -> EntryComparison {
-        match entry {
-            CompareEntry::Encryption(path_buf, file_hash) => self
-                .entries
-                .encryption
-                .get(&path_buf)
-                .map_or(EntryComparison::NotFound, |entry_hash| {
-                    if entry_hash == &file_hash {
-                        EntryComparison::Equal
-                    } else {
-                        EntryComparison::NotEqual
-                    }
-                }),
-        }
     }
 }
 

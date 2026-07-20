@@ -1,5 +1,9 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/lazin", "crates/lazin_error", "crates/lazin_gpg_wrapper", "crates/lazin_logger", "crates/lazin_pipeline",
+    "crates/lazin",
+    "crates/lazin_error",
+    "crates/lazin_gpg_wrapper",
+    "crates/lazin_logger",
+    "crates/lazin_pipeline",
 ]

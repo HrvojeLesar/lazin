@@ -6,16 +6,7 @@ use codespan_reporting::{
     term::{self, termcolor::Buffer},
 };
 
-use crate::{
-    common::Key,
-    config::{self, Name},
-};
-
-pub type DuplicateKeys = Vec<Key>;
-
-pub struct DuplicateKeysError {
-    pub duplicates: DuplicateKeys,
-}
+use crate::config::{self, Name};
 
 #[derive(Debug)]
 pub struct TomlError {
@@ -48,15 +39,13 @@ impl Display for TomlError {
 pub enum LazinError {
     Toml(Box<TomlError>),
     Io(std::io::Error),
-    DuplicateKeys(DuplicateKeys),
     DirectoryDoesNotExist(String),
     Custom(&'static str),
     InvalidModuleSources,
     ModuleNotFound(Name, Name),
-    WorkspaceNotFound(Key),
     StripPrefix(std::path::StripPrefixError),
     GpgWrapper(lazin_gpg_wrapper::Error),
-    DuplicateKeys2(config::config::DuplicateKeysError),
+    DuplicateKeys(config::DuplicateKeysError),
 }
 
 impl LazinError {
@@ -70,13 +59,6 @@ impl Display for LazinError {
         match self {
             LazinError::Toml(error) => write!(f, "Toml error: {}", error),
             LazinError::Io(error) => write!(f, "Io error: {}", error),
-            LazinError::DuplicateKeys(error) => {
-                write!(
-                    f,
-                    "Found duplicate keys, please make all workspaces and module names unique. Duplicate names: {}",
-                    duplicate_keys_string(error)
-                )
-            }
             LazinError::Custom(c) => write!(f, "{}", c),
             LazinError::DirectoryDoesNotExist(p) => write!(f, "Directory does not exists: '{}'", p),
             LazinError::InvalidModuleSources => write!(f, "Invalid module sources"),
@@ -88,14 +70,11 @@ impl Display for LazinError {
                     m.as_ref(),
                 )
             }
-            LazinError::WorkspaceNotFound(workspace) => {
-                write!(f, "Could not find workspace: '{}'", workspace)
-            }
             LazinError::StripPrefix(strip_prefix_error) => {
                 write!(f, "Failed to strip prefix: {}", strip_prefix_error)
             }
             LazinError::GpgWrapper(error) => error.fmt(f),
-            LazinError::DuplicateKeys2(error) => {
+            LazinError::DuplicateKeys(error) => {
                 let messages: Vec<String> = [
                     (!error.workspaces.is_empty()).then(|| format!(
                         "Found duplicate workspace names, please make sure all workspaces names are unique. Duplicate names: {}",
@@ -121,15 +100,13 @@ impl std::error::Error for LazinError {
         match self {
             LazinError::Toml(error) => error.error.source(),
             LazinError::Io(error) => error.source(),
-            LazinError::DuplicateKeys(_) => None,
             LazinError::Custom(_) => None,
             LazinError::DirectoryDoesNotExist(_) => None,
             LazinError::InvalidModuleSources => None,
             LazinError::ModuleNotFound(_, _) => None,
-            LazinError::WorkspaceNotFound(_) => None,
             LazinError::StripPrefix(strip_prefix_error) => strip_prefix_error.source(),
             LazinError::GpgWrapper(error) => error.source(),
-            LazinError::DuplicateKeys2(_) => None,
+            LazinError::DuplicateKeys(_) => None,
         }
     }
 }
@@ -137,22 +114,6 @@ impl std::error::Error for LazinError {
 impl From<TomlError> for LazinError {
     fn from(value: TomlError) -> Self {
         Self::Toml(Box::new(value))
-    }
-}
-
-impl From<DuplicateKeysError> for LazinError {
-    fn from(value: DuplicateKeysError) -> Self {
-        Self::DuplicateKeys(value.duplicates)
-    }
-}
-
-impl From<Vec<DuplicateKeysError>> for LazinError {
-    fn from(value: Vec<DuplicateKeysError>) -> Self {
-        let keys = value.into_iter().fold(Vec::new(), |mut acc, e| {
-            acc.extend(e.duplicates);
-            acc
-        });
-        Self::DuplicateKeys(keys)
     }
 }
 
@@ -174,16 +135,8 @@ impl From<lazin_gpg_wrapper::Error> for LazinError {
     }
 }
 
-impl From<config::config::DuplicateKeysError> for LazinError {
-    fn from(value: config::config::DuplicateKeysError) -> Self {
-        Self::DuplicateKeys2(value)
+impl From<config::DuplicateKeysError> for LazinError {
+    fn from(value: config::DuplicateKeysError) -> Self {
+        Self::DuplicateKeys(value)
     }
-}
-
-fn duplicate_keys_string(duplicates: &[Key]) -> String {
-    duplicates
-        .iter()
-        .map(|dup| dup.str())
-        .collect::<Vec<_>>()
-        .join(", ")
 }

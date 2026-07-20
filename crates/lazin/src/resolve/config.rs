@@ -42,7 +42,7 @@ pub struct Config {
 
 impl Config {
     pub fn parse(
-        config: config::config::Config,
+        config: config::Config,
         encryption_manager: EncryptionManager,
         mut gitignore: Gitignore,
     ) -> LazinResult<Self> {
