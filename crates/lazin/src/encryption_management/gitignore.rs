@@ -59,6 +59,7 @@ impl Gitignore {
     pub fn save(&self) -> LazinResult {
         let file = fs::OpenOptions::new()
             .write(true)
+            .truncate(true)
             .open(&self.path)
             .context("Failed to open gitignore file")?;
         let mut writer = BufWriter::new(&file);
@@ -194,5 +195,53 @@ mod test {
         expect_read(&mut reader, &mut buffer, LAZIN_V1_END);
         expect_read(&mut reader, &mut buffer, &user_file_1.add("\n"));
         expect_read(&mut reader, &mut buffer, &user_file_2.add("\n"));
+    }
+
+    #[test]
+    fn load_add_entries_remove_entry() {
+        let temp_file = TempFilepath::new();
+        let user_file_1 = "user/file".to_string();
+        let user_file_2 = "another/file".to_string();
+        {
+            let file = temp_file.file();
+            let mut writer = BufWriter::new(file);
+
+            writeln!(writer, "{}", user_file_1).expect("a valid write");
+            writeln!(writer, "{}", user_file_2).expect("a valid write");
+
+            writer.flush().expect("a flush");
+        }
+
+        let mut gitignore = Gitignore::load(temp_file.path()).expect("loaded gitignore");
+        let test_managed_path = "test/test".to_string();
+        let test_managed_path2 = "test/test2".to_string();
+        gitignore.managed.insert(test_managed_path.clone().into());
+        gitignore.managed.insert(test_managed_path2.clone().into());
+
+        gitignore.save().expect("a successfull save");
+
+        let file = temp_file.file();
+        let mut buffer = String::new();
+        let mut reader = BufReader::new(file);
+
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_BEGIN);
+        expect_read(
+            &mut reader,
+            &mut buffer,
+            &test_managed_path.clone().add("\n"),
+        );
+        expect_read(&mut reader, &mut buffer, &test_managed_path2.add("\n"));
+        expect_read(&mut reader, &mut buffer, LAZIN_V1_END);
+        expect_read(&mut reader, &mut buffer, &user_file_1.clone().add("\n"));
+        expect_read(&mut reader, &mut buffer, &user_file_2.clone().add("\n"));
+
+        let mut gitignore = Gitignore::load(temp_file.path()).expect("loaded gitignore");
+        gitignore.managed.insert(test_managed_path.clone().into());
+        gitignore.save().expect("a successfull save");
+
+        let file = temp_file.file();
+        let reader = BufReader::new(file);
+
+        assert_eq!(5, reader.lines().count());
     }
 }
