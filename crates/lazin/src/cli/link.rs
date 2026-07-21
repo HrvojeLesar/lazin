@@ -18,6 +18,12 @@ pub(super) struct Link {
     directory: Option<PathBuf>,
     #[arg(short = 'l', long = "link", help = "Link selected workspace")]
     link: bool,
+    #[arg(
+        short = 'f',
+        long = "force",
+        help = "Force linking, will override non linked files"
+    )]
+    force: bool,
 }
 
 impl Link {
@@ -30,14 +36,14 @@ impl Link {
         }
 
         if !self.link {
-            let mut linker = DryRunLinker::new(config);
+            let mut linker = DryRunLinker::new(config, self.force);
             linker.link(workspace_name)?;
         } else {
             #[cfg(unix)]
             {
                 use crate::filesystem::link::UnixFSLinker;
 
-                let mut linker = UnixFSLinker::new(config);
+                let mut linker = UnixFSLinker::new(config, self.force);
                 linker.link(workspace_name)?;
             }
         }

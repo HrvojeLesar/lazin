@@ -62,7 +62,7 @@ Great tools that are battle tested and work much better:
 
 ## TODO
 
-- [ ] Add force option when linking to override existing files
+- [x] Add force option when linking to override existing files
 - [ ] Add option to skip linking files which couldn't be decrypted
 - [ ] Add option to specify .gitignore path
 - [ ] Add logic for finding the nearest .git directory instead of assuming
@@ -70,3 +70,4 @@ command is ran in the correct directory
 - [ ] Add logic for removing links from previously linked workspaces when linking
 another workspace
 - [ ] Thinkup a better solution than reserving `config` as a keyword in modules
+- [ ] Allow linking to directories requiring a privileged user

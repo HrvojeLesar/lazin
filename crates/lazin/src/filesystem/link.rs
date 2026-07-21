@@ -63,10 +63,11 @@ pub trait Linker {
 #[cfg(unix)]
 pub struct UnixFSLinker {
     config: resolve::config::Config,
+    force: bool,
 }
 impl UnixFSLinker {
-    pub(crate) fn new(config: resolve::config::Config) -> Self {
-        Self { config }
+    pub(crate) fn new(config: resolve::config::Config, force: bool) -> Self {
+        Self { config, force }
     }
 }
 
@@ -74,9 +75,10 @@ impl UnixFSLinker {
 impl Linker for UnixFSLinker {
     fn link(&mut self, workspace_name: &str) -> LazinResult<()> {
         let modules = self.config.get_workspace_modules(workspace_name);
-        let encrypt_options = LinkEncryptOptions {
+        let encrypt_options = LinkOptions {
             output_override_path: None,
             encryption_manager: &self.config.encryption_manager,
+            force: self.force,
         };
 
         link(self, &modules, encrypt_options)?;
@@ -99,6 +101,26 @@ impl Linker for UnixFSLinker {
             abolute_source.display(),
             target.display()
         );
+
+        // TODO: add sudo linking, config option to prompt for sudo when linking
+        // a file which requires elevated permissions
+        if target.exists() {
+            match fs::remove_file(target) {
+                Ok(_) => {}
+                Err(e) => match e.kind() {
+                    std::io::ErrorKind::PermissionDenied => {
+                        lazin_logger::warn!(
+                            "Failed to remove existing file at target: '{}', this file will be skipped",
+                            target.display()
+                        );
+
+                        return Ok(());
+                    }
+                    _ => Err(e).context("Failed to remove file before linking")?,
+                },
+            }
+        }
+
         symlink(&abolute_source, target).context("Failed to symlink")?;
         copy_permissions(&abolute_source, target)?;
 
@@ -109,13 +131,15 @@ impl Linker for UnixFSLinker {
 pub struct DryRunLinker {
     config: resolve::config::Config,
     filesystem: RefCell<BTreeMap<PathBuf, FileType>>,
+    force: bool,
 }
 
 impl DryRunLinker {
-    pub fn new(config: resolve::config::Config) -> Self {
+    pub fn new(config: resolve::config::Config, force: bool) -> Self {
         Self {
             config,
             filesystem: RefCell::default(),
+            force,
         }
     }
 }
@@ -123,9 +147,10 @@ impl DryRunLinker {
 impl Linker for DryRunLinker {
     fn link(&mut self, workspace_name: &str) -> LazinResult<()> {
         let modules = self.config.get_workspace_modules(workspace_name);
-        let encrypt_options = LinkEncryptOptions {
+        let encrypt_options = LinkOptions {
             output_override_path: Some(Path::new("/dev/null")),
             encryption_manager: &self.config.encryption_manager,
+            force: self.force,
         };
 
         link(self, &modules, encrypt_options)?;
@@ -163,66 +188,69 @@ impl Linker for DryRunLinker {
     }
 }
 
-struct LinkEncryptOptions<'a> {
+struct LinkOptions<'a> {
     output_override_path: Option<&'a Path>,
     encryption_manager: &'a EncryptionManager,
+    force: bool,
 }
 
 fn link<T: Linker>(
     linker: &T,
     modules: &Vec<&resolve::module::Module>,
-    encrypt_options: LinkEncryptOptions<'_>,
+    options: LinkOptions<'_>,
 ) -> LazinResult<()> {
     for module in modules {
         for module_value in &module.values {
             let source = &module_value.source;
             let target = &module_value.target;
             linker.create_dir_all(target)?;
-            match linker.compare_symlink(source, target)? {
-                PathComparison::TargetLinkMissing => {
+            match (linker.compare_symlink(source, target)?, options.force) {
+                (PathComparison::TargetLinkMissing, _)
+                | (PathComparison::TargetAndSourceAlreadyLinked, true)
+                | (PathComparison::TargetIsAnExistingFile, true) => {
                     match module_value.encryption {
                         resolve::module::Encryption::Disabled => {}
                         resolve::module::Encryption::Enabled { .. } => {
                             let decryption_source_file =
                                 EncryptionManager::get_input_file_with_extension(source);
                             let decryption_output_file =
-                                encrypt_options.output_override_path.unwrap_or(target);
+                                options.output_override_path.unwrap_or(target);
                             lazin_logger::info!(
                                 "Decrypting file {} into {}",
                                 decryption_source_file.display(),
                                 decryption_output_file.display()
                             );
 
-                            encrypt_options
+                            options
                                 .encryption_manager
-                                .manage_decryption(source, encrypt_options.output_override_path)?
+                                .manage_decryption(source, options.output_override_path)?
                         }
                     }
 
                     linker.symlink(source, target)?
                 }
-                PathComparison::TargetAndSourceAlreadyLinked => {
+                (PathComparison::TargetAndSourceAlreadyLinked, false) => {
                     lazin_logger::warn!(
                         "Skipping linking {} -> {} - target is already linked",
                         source.display(),
                         target.display()
                     )
                 }
-                PathComparison::TargetIsAnExistingFile => {
+                (PathComparison::TargetIsAnExistingFile, false) => {
                     lazin_logger::error!(
                         "Skipping linking {} -> {} - target is an existing file",
                         source.display(),
                         target.display()
                     )
                 }
-                PathComparison::TargetIsAnExistingDirectory => {
+                (PathComparison::TargetIsAnExistingDirectory, _) => {
                     lazin_logger::error!(
                         "Skipping linking {} -> {} - target is an existing directory",
                         source.display(),
                         target.display()
                     )
                 }
-                PathComparison::Unknown => {
+                (PathComparison::Unknown, _) => {
                     lazin_logger::error!(
                         "Skipping linking {} -> {} - unknown path comparison; this is a bug and this case should be handled",
                         source.display(),
