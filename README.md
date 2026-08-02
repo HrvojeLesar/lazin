@@ -71,3 +71,4 @@ command is ran in the correct directory
 another workspace
 - [ ] Thinkup a better solution than reserving `config` as a keyword in modules
 - [ ] Allow linking to directories requiring a privileged user
+- [x] Add message when running as sudo

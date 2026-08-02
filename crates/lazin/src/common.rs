@@ -22,7 +22,11 @@ impl TomlFile {
 }
 
 pub fn directory(path: Option<&Path>) -> &Path {
-    path.unwrap_or(Path::new(DEFAULT_DIRECTORY))
+    let directory = path.unwrap_or(Path::new(DEFAULT_DIRECTORY));
+
+    print_root_warning(directory);
+
+    directory
 }
 
 pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
@@ -89,4 +93,19 @@ macro_rules! exit_error {
 #[allow(unused)]
 pub fn exit_error_with_code(code: i32) -> ! {
     exit(code)
+}
+
+#[inline]
+pub fn print_root_warning(directory: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+
+        if std::env::var("USER").unwrap_or_default() == "root"
+            && !std::fs::metadata(directory).is_ok_and(|m| m.uid() == 0)
+        {
+            lazin_logger::warn!("Take care when running Lazin as root, lazin.cache could get created with `root` as the owner in users directory.
+If you are logged in as root, this message can be ignored.");
+        }
+    }
 }

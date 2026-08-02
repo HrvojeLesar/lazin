@@ -4,7 +4,7 @@ use crate::common;
 use clap::Args;
 use std::path::PathBuf;
 
-/// Lists configured workspaces and
+/// Lists configured workspaces
 #[derive(Args)]
 pub(super) struct Workspaces {
     #[arg(
