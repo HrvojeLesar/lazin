@@ -30,11 +30,17 @@ pub(super) struct Link {
         help = "Skips any files that fail encryption/decryption, by default failure will stop the process partially"
     )]
     skip_failed: bool,
+    #[arg(
+        short = 'g',
+        long = "gitignore",
+        help = "Gitignore file, can be a non existing file to not use gitignore at all. By default looks for .gitignore in the current working directory"
+    )]
+    gitignore: Option<PathBuf>,
 }
 
 impl Link {
     pub(super) fn link(&self) -> LazinResult<()> {
-        let config = common::parse_config(self.directory.as_deref())?;
+        let config = common::parse_config(self.directory.as_deref(), self.gitignore.as_deref())?;
         let workspace_name = &self.workspace;
 
         if !config.contains_workspace(workspace_name) {

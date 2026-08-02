@@ -9,6 +9,7 @@ use std::{
 use crate::{cache, config, encryption_management, error::LazinError, resolve};
 
 pub const DEFAULT_DIRECTORY: &str = "lazin";
+const GITIGNORE_DEFAULT_PATH: &str = "./.gitignore";
 
 pub struct TomlFile {
     pub path: PathBuf,
@@ -46,8 +47,12 @@ pub fn files(directory: &Path) -> LazinResult<Vec<TomlFile>> {
     Ok(files)
 }
 
-pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<resolve::config::Config> {
+pub fn parse_config(
+    config_directory: Option<&Path>,
+    gitignore_file: Option<&Path>,
+) -> LazinResult<resolve::config::Config> {
     let directory = directory(config_directory);
+    let gitignore_file = gitignore_file.unwrap_or(Path::new(GITIGNORE_DEFAULT_PATH));
 
     match directory.try_exists() {
         Ok(true) => {}
@@ -61,9 +66,14 @@ pub fn parse_config(config_directory: Option<&Path>) -> LazinResult<resolve::con
     let config = config::Config::parse(directory)?;
 
     let cache = cache::Cache::try_new(directory)?;
-    // TODO: add configurable gitignore location, current directory should be default
-    // or walk down to a closes directory with .git directory
-    let gitignore = encryption_management::gitignore::Gitignore::load("./.gitignore")?;
+
+    let gitignore = match gitignore_file.exists() {
+        true => Some(encryption_management::gitignore::Gitignore::load(
+            gitignore_file,
+        )?),
+        false => None,
+    };
+
     let encryption_manager = encryption_management::EncryptionManager::new(cache);
 
     resolve::config::Config::parse(config, encryption_manager, gitignore)

@@ -19,11 +19,17 @@ pub(super) struct Workspaces {
         help = "Include a list of configured modules for the workspace"
     )]
     include_modules: bool,
+    #[arg(
+        short = 'g',
+        long = "gitignore",
+        help = "Gitignore file, can be a non existing file to not use gitignore at all. By default looks for .gitignore in the current working directory"
+    )]
+    gitignore: Option<PathBuf>,
 }
 
 impl Workspaces {
     pub fn list_workspaces(&self) -> LazinResult<()> {
-        let config = common::parse_config(self.directory.as_deref())?;
+        let config = common::parse_config(self.directory.as_deref(), self.gitignore.as_deref())?;
 
         if config.workspaces.is_empty() {
             lazin_logger::warn!("No workspaces configured");

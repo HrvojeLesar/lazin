@@ -44,7 +44,7 @@ impl Config {
     pub fn parse(
         config: config::Config,
         encryption_manager: EncryptionManager,
-        mut gitignore: Gitignore,
+        mut gitignore: Option<Gitignore>,
     ) -> LazinResult<Self> {
         let validated_modules =
             validate_module_sources(config.modules).context("Failed to validate module sources")?;
@@ -84,12 +84,14 @@ impl Config {
             m.values.iter().for_each(|v| match &v.encryption {
                 resolve::module::Encryption::Disabled => {}
                 resolve::module::Encryption::Enabled { .. } => {
-                    gitignore.managed.insert(v.source.clone());
+                    gitignore
+                        .as_mut()
+                        .map(|gitignore| gitignore.managed.insert(v.source.clone()));
                 }
             })
         });
 
-        gitignore.save()?;
+        gitignore.map(|gitignore| gitignore.save()).transpose()?;
 
         Ok(Self {
             expanded_modules,

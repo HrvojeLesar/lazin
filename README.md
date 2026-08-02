@@ -64,9 +64,10 @@ Great tools that are battle tested and work much better:
 
 - [x] Add force option when linking to override existing files
 - [x] Add option to skip linking files which couldn't be decrypted
-- [ ] Add option to specify .gitignore path
-- [ ] Add logic for finding the nearest .git directory instead of assuming
-command is ran in the correct directory
+- [x] Add option to specify .gitignore path
+- [x] ~~Add logic for finding the nearest .git directory instead of assuming
+command is ran in the correct directory~~
+Won't do: no clear path where to stop the search
 - [ ] Add logic for removing links from previously linked workspaces when linking
 another workspace
 - [ ] Thinkup a better solution than reserving `config` as a keyword in modules

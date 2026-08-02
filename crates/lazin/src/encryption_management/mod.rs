@@ -12,8 +12,6 @@ pub mod gitignore;
 
 pub const GPG_EXTENSION: &str = "gpg";
 
-// TODO: Add a flag for skipping trying to decrypt or continue linking if
-// decryption fails
 #[derive(Debug)]
 pub struct EncryptionManager {
     cache: RefCell<Cache>,

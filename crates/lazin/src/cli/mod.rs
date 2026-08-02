@@ -57,7 +57,6 @@ impl Cli {
 }
 
 fn handle_error<T>(result: LazinResult<T>) {
-    // TODO: Better errors
     if let Err(e) = result {
         lazin_logger::error!(e);
         exit_error!()
