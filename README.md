@@ -63,7 +63,7 @@ Great tools that are battle tested and work much better:
 ## TODO
 
 - [x] Add force option when linking to override existing files
-- [ ] Add option to skip linking files which couldn't be decrypted
+- [x] Add option to skip linking files which couldn't be decrypted
 - [ ] Add option to specify .gitignore path
 - [ ] Add logic for finding the nearest .git directory instead of assuming
 command is ran in the correct directory
@@ -72,3 +72,4 @@ another workspace
 - [ ] Thinkup a better solution than reserving `config` as a keyword in modules
 - [ ] Allow linking to directories requiring a privileged user
 - [x] Add message when running as sudo
+- [ ] Update gpg wrapper to allow using passphrases in keys

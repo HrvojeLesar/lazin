@@ -60,14 +60,26 @@ pub trait Linker {
     fn symlink(&self, source: &Path, target: &Path) -> LazinResult<()>;
 }
 
+pub struct LinkerOptions {
+    pub force: bool,
+    pub should_skip_failed_encryption_decryption: bool,
+}
+
 #[cfg(unix)]
 pub struct UnixFSLinker {
     config: resolve::config::Config,
     force: bool,
+    should_skip_failed_encryption_decryption: bool,
 }
+
 impl UnixFSLinker {
-    pub(crate) fn new(config: resolve::config::Config, force: bool) -> Self {
-        Self { config, force }
+    pub(crate) fn new(config: resolve::config::Config, linker_options: LinkerOptions) -> Self {
+        Self {
+            config,
+            force: linker_options.force,
+            should_skip_failed_encryption_decryption: linker_options
+                .should_skip_failed_encryption_decryption,
+        }
     }
 }
 
@@ -79,6 +91,7 @@ impl Linker for UnixFSLinker {
             output_override_path: None,
             encryption_manager: &self.config.encryption_manager,
             force: self.force,
+            should_skip_failed_encryption_decryption: self.should_skip_failed_encryption_decryption,
         };
 
         link(self, &modules, encrypt_options)?;
@@ -132,14 +145,17 @@ pub struct DryRunLinker {
     config: resolve::config::Config,
     filesystem: RefCell<BTreeMap<PathBuf, FileType>>,
     force: bool,
+    should_skip_failed_encryption_decryption: bool,
 }
 
 impl DryRunLinker {
-    pub fn new(config: resolve::config::Config, force: bool) -> Self {
+    pub fn new(config: resolve::config::Config, linker_options: LinkerOptions) -> Self {
         Self {
             config,
             filesystem: RefCell::default(),
-            force,
+            force: linker_options.force,
+            should_skip_failed_encryption_decryption: linker_options
+                .should_skip_failed_encryption_decryption,
         }
     }
 }
@@ -151,6 +167,7 @@ impl Linker for DryRunLinker {
             output_override_path: Some(Path::new("/dev/null")),
             encryption_manager: &self.config.encryption_manager,
             force: self.force,
+            should_skip_failed_encryption_decryption: self.should_skip_failed_encryption_decryption,
         };
 
         link(self, &modules, encrypt_options)?;
@@ -192,6 +209,7 @@ struct LinkOptions<'a> {
     output_override_path: Option<&'a Path>,
     encryption_manager: &'a EncryptionManager,
     force: bool,
+    should_skip_failed_encryption_decryption: bool,
 }
 
 fn link<T: Linker>(
@@ -220,6 +238,15 @@ fn link<T: Linker>(
                                 decryption_source_file.display(),
                                 decryption_output_file.display()
                             );
+                            if options.should_skip_failed_encryption_decryption
+                                && options.encryption_manager.can_decrypt(source)?
+                            {
+                                lazin_logger::info!(
+                                    "Cannot decrypt file {}, skipping",
+                                    source.display()
+                                );
+                                return Ok(());
+                            }
 
                             options
                                 .encryption_manager

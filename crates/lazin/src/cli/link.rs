@@ -6,7 +6,7 @@ use lazin_error::LazinResult;
 use crate::{
     common::{self},
     exit_error,
-    filesystem::link::{DryRunLinker, Linker},
+    filesystem::link::{DryRunLinker, Linker, LinkerOptions},
 };
 
 /// Link selected workspace modules, by default this performs
@@ -24,6 +24,12 @@ pub(super) struct Link {
         help = "Force linking, will override non linked files"
     )]
     force: bool,
+    #[arg(
+        short = 's',
+        long = "skip-failed",
+        help = "Skips any files that fail encryption/decryption, by default failure will stop the process partially"
+    )]
+    skip_failed: bool,
 }
 
 impl Link {
@@ -35,15 +41,20 @@ impl Link {
             exit_error!("Workspace '{}' not found", workspace_name)
         }
 
+        let linker_options = LinkerOptions {
+            force: self.force,
+            should_skip_failed_encryption_decryption: self.skip_failed,
+        };
+
         if !self.link {
-            let mut linker = DryRunLinker::new(config, self.force);
+            let mut linker = DryRunLinker::new(config, linker_options);
             linker.link(workspace_name)?;
         } else {
             #[cfg(unix)]
             {
                 use crate::filesystem::link::UnixFSLinker;
 
-                let mut linker = UnixFSLinker::new(config, self.force);
+                let mut linker = UnixFSLinker::new(config, linker_options);
                 linker.link(workspace_name)?;
             }
         }

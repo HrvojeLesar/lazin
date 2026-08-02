@@ -20,6 +20,12 @@ pub(super) struct ManageEncryption {
         help = "Decrypt files from all configured modules"
     )]
     decrypt: bool,
+    #[arg(
+        short = 's',
+        long = "skip-failed",
+        help = "Skips any files that fail encryption/decryption, by default failure will stop the process partially"
+    )]
+    skip_failed: bool,
 }
 
 impl ManageEncryption {
@@ -40,6 +46,17 @@ impl ManageEncryption {
             .try_for_each(|m| -> LazinResult {
                 m.values.iter().try_for_each(|v| -> LazinResult {
                     if let resolve::module::Encryption::Enabled { recipient } = &v.encryption {
+                        if self.skip_failed
+                            && config
+                                .encryption_manager
+                                .can_encrypt(&v.source, recipient)?
+                        {
+                            lazin_logger::info!(
+                                "Cannot encrypt file {}, skipping",
+                                v.source.display()
+                            );
+                            return Ok(());
+                        }
                         let did_encrypt = config
                             .encryption_manager
                             .manage_encryption(&v.source, recipient)?;
@@ -66,6 +83,13 @@ impl ManageEncryption {
             .try_for_each(|m| -> LazinResult {
                 m.values.iter().try_for_each(|v| -> LazinResult {
                     if let resolve::module::Encryption::Enabled { .. } = &v.encryption {
+                        if self.skip_failed && config.encryption_manager.can_decrypt(&v.source)? {
+                            lazin_logger::info!(
+                                "Cannot decrypt file {}, skipping",
+                                v.source.display()
+                            );
+                            return Ok(());
+                        }
                         config
                             .encryption_manager
                             .manage_decryption(&v.source, None)?;

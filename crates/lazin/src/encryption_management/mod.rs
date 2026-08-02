@@ -41,7 +41,7 @@ impl EncryptionManager {
         };
 
         let did_encrypt_file = if file_hash_changed || !Self::encrypted_file_exists(source) {
-            self.encrypt(source, recipient)?;
+            self.encrypt(source, recipient, None)?;
             true
         } else {
             false
@@ -54,6 +54,38 @@ impl EncryptionManager {
         self.decrypt(source, override_output)?;
 
         Ok(())
+    }
+
+    #[cfg(unix)]
+    pub fn can_decrypt(&self, source: &Path) -> LazinResult<bool> {
+        let decrypt_to = Path::new("/dev/null");
+
+        if let Err(e) = self.decrypt(source, Some(decrypt_to))
+            && let Some(gpg_error) = e.downcast_ref::<lazin_gpg_wrapper::Error>()
+        {
+            match gpg_error {
+                lazin_gpg_wrapper::Error::GpgNotFound => return Ok(false),
+                _ => return Err(e),
+            };
+        }
+
+        Ok(true)
+    }
+
+    #[cfg(unix)]
+    pub fn can_encrypt(&self, source: &Path, recipient: &str) -> LazinResult<bool> {
+        let encrypt_to = PathBuf::from("/dev/null");
+
+        if let Err(e) = self.encrypt(source, recipient, Some(encrypt_to))
+            && let Some(gpg_error) = e.downcast_ref::<lazin_gpg_wrapper::Error>()
+        {
+            match gpg_error {
+                lazin_gpg_wrapper::Error::GpgNotFound => return Ok(false),
+                _ => return Err(e),
+            };
+        }
+
+        Ok(true)
     }
 
     fn decrypt(&self, file: &Path, override_output: Option<&Path>) -> LazinResult<()> {
@@ -75,9 +107,14 @@ impl EncryptionManager {
         Ok(())
     }
 
-    fn encrypt(&self, file: &Path, recipient: &str) -> LazinResult<()> {
+    fn encrypt(
+        &self,
+        file: &Path,
+        recipient: &str,
+        override_output: Option<PathBuf>,
+    ) -> LazinResult<()> {
         let input = file;
-        let output = Self::get_input_file_with_extension(file);
+        let output = override_output.unwrap_or(Self::get_input_file_with_extension(file));
 
         lazin_gpg_wrapper::encrypt_file(EncryptOptions {
             input,
