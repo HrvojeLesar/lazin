@@ -72,12 +72,22 @@ impl InnerLogger {
             matches!(level, Level::Warn | Level::Error)
         }
     }
+
+    fn log_err(&self, level: Level, message: &str) {
+        if self.should_output(&level) {
+            eprintln!("{}: {}", level.prefix(self.coloured()), message)
+        }
+    }
 }
 
 pub struct LazinLogger(InnerLogger);
 impl LazinLogger {
     pub fn log(&self, level: Level, message: &str) {
         self.0.log(level, message);
+    }
+
+    pub fn log_err(&self, level: Level, message: &str) {
+        self.0.log_err(level, message);
     }
 
     pub fn print(&self, message: &str) {
@@ -110,6 +120,17 @@ macro_rules! __log {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __log_err {
+    ($level:expr, $value:expr) => {
+        $crate::default_logger().log_err($level, &format!("{}", $value))
+    };
+    ($level:expr, $($a:tt)*) => {
+        $crate::default_logger().log_err($level, &format!($($a)*))
+    };
+}
+
 #[macro_export]
 macro_rules! trace { ($($a:tt)*) => { $crate::__log!($crate::Level::Trace, $($a)*) }; }
 #[macro_export]
@@ -119,7 +140,7 @@ macro_rules! info  { ($($a:tt)*) => { $crate::__log!($crate::Level::Info,  $($a)
 #[macro_export]
 macro_rules! warn  { ($($a:tt)*) => { $crate::__log!($crate::Level::Warn,  $($a)*) }; }
 #[macro_export]
-macro_rules! error { ($($a:tt)*) => { $crate::__log!($crate::Level::Error, $($a)*) }; }
+macro_rules! error { ($($a:tt)*) => { $crate::__log_err!($crate::Level::Error, $($a)*) }; }
 
 #[macro_export]
 macro_rules! print {
