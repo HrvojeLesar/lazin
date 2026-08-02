@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "lazin_error"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "lazin_gpg_wrapper"

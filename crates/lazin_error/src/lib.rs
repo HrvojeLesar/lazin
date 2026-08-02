@@ -14,6 +14,14 @@ impl LazinError {
     {
         LazinError(Box::new(error))
     }
+
+    pub fn is<E: StdError + 'static>(&self) -> bool {
+        self.0.is::<E>()
+    }
+
+    pub fn downcast_ref<E: StdError + 'static>(&self) -> Option<&E> {
+        self.0.downcast_ref::<E>()
+    }
 }
 
 impl<E> From<E> for LazinError
