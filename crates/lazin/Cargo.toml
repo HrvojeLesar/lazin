@@ -16,6 +16,7 @@ lazin_error = { path = "../lazin_error", version = "0.1.1" }
 lazin_gpg_wrapper = { path = "../lazin_gpg_wrapper", version = "0.1.0" }
 lazin_logger = { path = "../lazin_logger", version = "0.2.0" }
 lazin_pipeline = { path = "../lazin_pipeline", version = "0.1.0" }
+libc = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "=0.10.9"
 toml = "1.1.2"

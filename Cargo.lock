@@ -207,6 +207,7 @@ dependencies = [
  "lazin_gpg_wrapper",
  "lazin_logger",
  "lazin_pipeline",
+ "libc",
  "serde",
  "sha2",
  "toml",

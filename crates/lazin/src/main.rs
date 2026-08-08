@@ -7,6 +7,8 @@ mod config;
 mod encryption_management;
 mod error;
 mod filesystem;
+#[cfg(unix)]
+mod fingerprint;
 mod resolve;
 
 #[cfg(test)]
