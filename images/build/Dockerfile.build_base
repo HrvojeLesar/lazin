@@ -1,0 +1,5 @@
+FROM rust:1.93.0
+
+WORKDIR /lazin
+
+COPY . .
