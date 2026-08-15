@@ -17,8 +17,24 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attributes = &input_fn.attrs;
     let fn_args = &signature.inputs;
 
-    let before_calls = args.before.iter().map(|f| quote! { #f(); });
-    let after_calls = args.after.iter().map(|f| quote! { #f(); });
+    let before_calls = args.before.iter().map(|call| {
+        let path = &call.path;
+        let call_args = call.args.iter().map(|arg| {
+            let ident = &arg.ident;
+            if arg.mutability {
+                quote! { &mut #ident }
+            } else {
+                quote! { &#ident }
+            }
+        });
+
+        quote! { #path(#(#call_args),*); }
+    });
+
+    let after_calls = args.after.iter().map(|call| {
+        let function = &call.path;
+        quote! { #function(); }
+    });
 
     let mut context_setup = Vec::new();
 
@@ -29,7 +45,7 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let ty = &pat_type.ty;
 
                 context_setup.push(quote! {
-                    let mut #pat = ::lazin_test_utils::context::TestContextDropGuard(
+                    let #pat = ::lazin_test_utils::context::TestContextDropGuard(
                         <#ty as ::lazin_test_utils::context::TestContext>::setup()
                     );
                 });

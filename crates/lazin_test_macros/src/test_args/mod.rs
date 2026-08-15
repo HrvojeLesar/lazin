@@ -1,5 +1,5 @@
 use syn::{
-    Path, Token, parenthesized,
+    Ident, Path, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
 };
@@ -11,12 +11,12 @@ mod kw {
 
 #[derive(Default)]
 pub(crate) struct LazinTestArgs {
-    pub before: Vec<Path>,
-    pub after: Vec<Path>,
+    pub before: Vec<FnCall>,
+    pub after: Vec<FnCall>,
 }
 
 impl LazinTestArgs {
-    fn new(before: Option<Vec<Path>>, after: Option<Vec<Path>>) -> Self {
+    fn new(before: Option<Vec<FnCall>>, after: Option<Vec<FnCall>>) -> Self {
         Self {
             before: before.unwrap_or_default(),
             after: after.unwrap_or_default(),
@@ -71,6 +71,40 @@ impl Parse for LazinTestArgs {
     }
 }
 
-fn parse_fns(input: ParseStream) -> syn::Result<Punctuated<Path, Token![,]>> {
+fn parse_fns(input: ParseStream) -> syn::Result<Punctuated<FnCall, Token![,]>> {
     Punctuated::parse_terminated(input)
+}
+
+pub struct CallArg {
+    pub mutability: bool,
+    pub ident: Ident,
+}
+
+impl Parse for CallArg {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mutability = input.parse::<Token![mut]>().is_ok();
+        let ident: Ident = input.parse()?;
+        Ok(CallArg { mutability, ident })
+    }
+}
+
+pub struct FnCall {
+    pub path: Path,
+    pub args: Vec<CallArg>,
+}
+
+impl Parse for FnCall {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let path: Path = input.parse()?;
+
+        let mut args = Vec::new();
+        if input.peek(syn::token::Paren) {
+            let content;
+            parenthesized!(content in input);
+            let idents: Punctuated<CallArg, Token![,]> = Punctuated::parse_terminated(&content)?;
+            args.extend(idents);
+        }
+
+        Ok(FnCall { path, args })
+    }
 }
