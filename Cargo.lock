@@ -235,6 +235,7 @@ version = "0.1.0"
 name = "lazin_test_macros"
 version = "0.1.0"
 dependencies = [
+ "lazin_test_utils",
  "quote",
  "syn 3.0.3",
 ]
