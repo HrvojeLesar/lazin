@@ -208,6 +208,7 @@ dependencies = [
  "lazin_logger",
  "lazin_pipeline",
  "lazin_test_macros",
+ "lazin_test_utils",
  "libc",
  "serde",
  "sha2",
@@ -237,6 +238,10 @@ dependencies = [
  "quote",
  "syn 3.0.3",
 ]
+
+[[package]]
+name = "lazin_test_utils"
+version = "0.1.0"
 
 [[package]]
 name = "libc"

@@ -11,9 +11,6 @@ mod filesystem;
 mod fingerprint;
 mod resolve;
 
-#[cfg(test)]
-mod test;
-
 fn main() {
     Cli::main();
 }

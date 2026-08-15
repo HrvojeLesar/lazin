@@ -96,10 +96,9 @@ pub fn init_default_config(base_dir: &Path) -> LazinResult<()> {
 mod test {
     use std::fs;
 
-    use crate::{
-        filesystem::init::{init_default_config, init_directory},
-        test::filesystem::tmp::TempDir,
-    };
+    use crate::filesystem::init::{init_default_config, init_directory};
+
+    use lazin_test_utils::temp::TempDir;
 
     #[test]
     fn temp_default_config() {

@@ -90,10 +90,8 @@ mod test {
         ops::Add,
     };
 
-    use crate::{
-        encryption_management::gitignore::{BEGIN_MARKER, END_MARKER, Gitignore},
-        test::filesystem::tmp::TempFilepath,
-    };
+    use crate::encryption_management::gitignore::{BEGIN_MARKER, END_MARKER, Gitignore};
+    use lazin_test_utils::temp::TempFilepath;
 
     const LAZIN_V1_BEGIN: &str = "# >>> lazin v1 - PLEASE DO NOT MODIFY MANUALLY >>>\n";
     const LAZIN_V1_END: &str = "# <<< lazin - PLEASE DO NOT MODIFY MANUALLY <<<\n";

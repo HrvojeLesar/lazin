@@ -38,7 +38,8 @@ impl Init {
 mod test {
     use std::path::{Path, PathBuf};
 
-    use crate::{cli::init::Init, common, test::filesystem::tmp::TempDir};
+    use crate::{cli::init::Init, common};
+    use lazin_test_utils::temp::TempDir;
 
     #[test]
     fn defaults_to_lazin_directory() {

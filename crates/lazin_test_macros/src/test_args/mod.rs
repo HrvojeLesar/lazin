@@ -1,5 +1,5 @@
 use syn::{
-    Ident, Token, parenthesized,
+    Path, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
 };
@@ -11,12 +11,12 @@ mod kw {
 
 #[derive(Default)]
 pub(crate) struct LazinTestArgs {
-    pub before: Vec<Ident>,
-    pub after: Vec<Ident>,
+    pub before: Vec<Path>,
+    pub after: Vec<Path>,
 }
 
 impl LazinTestArgs {
-    fn new(before: Option<Vec<Ident>>, after: Option<Vec<Ident>>) -> Self {
+    fn new(before: Option<Vec<Path>>, after: Option<Vec<Path>>) -> Self {
         Self {
             before: before.unwrap_or_default(),
             after: after.unwrap_or_default(),
@@ -46,7 +46,7 @@ impl Parse for LazinTestArgs {
         while !input.is_empty() {
             let lookahead = input.lookahead1();
 
-            let target: &mut Vec<Ident> = if lookahead.peek(kw::before) {
+            let target = if lookahead.peek(kw::before) {
                 input.parse::<kw::before>()?;
                 &mut before
             } else if lookahead.peek(kw::after) {
@@ -71,6 +71,6 @@ impl Parse for LazinTestArgs {
     }
 }
 
-fn parse_fns(input: ParseStream) -> syn::Result<Punctuated<Ident, Token![,]>> {
+fn parse_fns(input: ParseStream) -> syn::Result<Punctuated<Path, Token![,]>> {
     Punctuated::parse_terminated(input)
 }
