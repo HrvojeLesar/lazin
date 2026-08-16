@@ -8,7 +8,13 @@ where
     fn teardown(&mut self) {}
 }
 
-pub struct TestContextDropGuard<T: TestContext>(pub T);
+pub struct TestContextDropGuard<T: TestContext>(T);
+
+impl<T: TestContext> TestContextDropGuard<T> {
+    pub fn new(val: T) -> Self {
+        Self(val)
+    }
+}
 
 impl<T: TestContext> Drop for TestContextDropGuard<T> {
     fn drop(&mut self) {

@@ -18,8 +18,8 @@ impl LazinFactory for Lazin<Init> {
 }
 
 impl Lazin<Init> {
-    pub fn directory(&mut self, directory: &Path) -> LazinResult<()> {
-        self.command.arg("--directory").arg(directory);
+    pub fn directory<P: AsRef<Path>>(&mut self, directory: P) -> LazinResult<()> {
+        self.command.arg("--directory").arg(directory.as_ref());
         Ok(())
     }
 }

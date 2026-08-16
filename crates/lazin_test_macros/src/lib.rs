@@ -45,7 +45,7 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let ty = &pat_type.ty;
 
                 context_setup.push(quote! {
-                    let #pat = ::lazin_test_utils::context::TestContextDropGuard(
+                    let #pat = ::lazin_test_utils::context::TestContextDropGuard::new(
                         <#ty as ::lazin_test_utils::context::TestContext>::setup()
                     );
                 });
