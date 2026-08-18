@@ -4,6 +4,4 @@ mod context {
     pub mod temp;
 }
 
-mod tests {
-    mod init;
-}
+mod tests;

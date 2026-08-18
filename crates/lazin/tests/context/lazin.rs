@@ -1,13 +1,20 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::{BufWriter, Seek, Write},
+    path::{Path, PathBuf},
+    process::Output,
+};
 
+use lazin_error::{Context, LazinResult};
 use lazin_test_utils::context::TestContext;
 
 use crate::{
-    cmd::{Lazin, LazinFactory, init::Init},
+    cmd::{Lazin, LazinFactory, check::Check, init::Init},
     context::temp::TempFilesContext,
 };
 
 pub type LazinInitContext = LazinContext<Lazin<Init>>;
+pub type LazinCheckContext = LazinContext<Lazin<Check>>;
 
 pub struct LazinContext<T: LazinFactory> {
     pub tempfiles_context: TempFilesContext,
@@ -43,5 +50,66 @@ impl<T: LazinFactory> LazinContext<T> {
         }
 
         path
+    }
+
+    pub fn run(&mut self) -> Output {
+        self.lazin.output()
+    }
+
+    pub fn create_file<P: AsRef<Path>>(&self, path: P) -> LazinResult<std::fs::File> {
+        let path = self.create_path(path);
+        std::fs::File::create_new::<_>(&path)
+            .with_context(|| format!("failed to create new file '{}'", path.display()))
+    }
+
+    pub fn create_file_with_content<P, F>(
+        &self,
+        path: P,
+        write_func: F,
+    ) -> LazinResult<std::fs::File>
+    where
+        P: AsRef<Path>,
+        F: Fn(&mut BufWriter<&File>) -> LazinResult,
+    {
+        let path = self.create_path(path);
+        let file = self.create_file(&path)?;
+        {
+            let mut writer = BufWriter::new(&file);
+            write_func(&mut writer)
+                .with_context(|| format!("failed to write to file '{}'", path.display()))?;
+
+            writer
+                .flush()
+                .with_context(|| format!("failed to flush file '{}'", path.display()))?;
+        }
+
+        let mut file = file;
+        file.rewind()?;
+
+        Ok(file)
+    }
+
+    pub fn create_path<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        if path.as_ref().starts_with(self.path()) {
+            path.as_ref().into()
+        } else {
+            self.path().join(path)
+        }
+    }
+
+    pub fn create_dir<P: AsRef<Path>>(&self, dirname: P) -> LazinResult<PathBuf> {
+        let path = self.create_path(dirname);
+        std::fs::create_dir(&path)
+            .with_context(|| format!("failed to create directory at '{}'", path.display()))?;
+
+        Ok(path)
+    }
+
+    pub fn stdout(&self, output: &Output) -> String {
+        String::from_utf8_lossy(&output.stdout).to_string()
+    }
+
+    pub fn stderr(&self, output: &Output) -> String {
+        String::from_utf8_lossy(&output.stderr).to_string()
     }
 }

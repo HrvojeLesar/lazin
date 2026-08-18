@@ -39,3 +39,45 @@ impl<T> Lazin<T> {
         self.command.output().expect("Failed to execute lazin")
     }
 }
+
+#[macro_export]
+macro_rules! directory_impl {
+    () => {
+        pub fn directory<P: AsRef<std::path::Path>>(
+            &mut self,
+            directory: P,
+        ) -> lazin_error::LazinResult<()> {
+            self.command.arg("--directory").arg(directory.as_ref());
+            Ok(())
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_lazin_factory {
+    ($ty:ty, $($cmd:literal),+ $(,)?) => {
+        impl LazinFactory for Lazin<$ty> {
+            type Output = $ty;
+
+            fn new(dir: Option<&std::path::Path>) -> Lazin<Self::Output> {
+                let mut command = $crate::cmd::lazin_cmd(dir);
+                $(command.arg($cmd);)+
+
+                Self::new_for_t(command)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! gitignore_impl {
+    () => {
+        pub fn gitignore<P: AsRef<std::path::Path>>(
+            &mut self,
+            directory: P,
+        ) -> lazin_error::LazinResult<()> {
+            self.command.arg("--gitignore").arg(directory.as_ref());
+            Ok(())
+        }
+    };
+}
