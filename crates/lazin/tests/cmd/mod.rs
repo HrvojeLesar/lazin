@@ -4,6 +4,7 @@ use std::{
     process::{Command, Output},
 };
 
+pub mod check;
 pub mod init;
 
 #[inline]

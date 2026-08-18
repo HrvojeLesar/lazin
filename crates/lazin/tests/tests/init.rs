@@ -1,4 +1,4 @@
-use std::{fs, path::Path, process::Output};
+use std::{path::Path, process::Output};
 
 use lazin_test_macros::lazin_test;
 use lazin_test_utils::expect_ext::ExpectWithContext;
@@ -6,19 +6,11 @@ use lazin_test_utils::expect_ext::ExpectWithContext;
 use crate::{
     cmd::LazinFactory,
     context::lazin::{LazinContext, LazinInitContext},
+    tests::{
+        DEFAULT_BASE_DIR, DEFAULT_MODULES_FILE, DEFAULT_MODULES_ITER, DEFAULT_WORKSPACE_FILE,
+        DEFAULT_WORKSPACE_ITER, setup_empty_lazin_dir,
+    },
 };
-
-const DEFAULT_BASE_DIR: &str = "lazin";
-const DEFAULT_MODULES_FILE: &str = "modules.toml";
-const DEFAULT_WORKSPACE_FILE: &str = "workspace.toml";
-const DEFAULT_MODULES_ITER: [&str; 2] = [DEFAULT_BASE_DIR, DEFAULT_MODULES_FILE];
-const DEFAULT_WORKSPACE_ITER: [&str; 2] = [DEFAULT_BASE_DIR, DEFAULT_WORKSPACE_FILE];
-
-fn setup_empty_dir<T: LazinFactory>(ctx: &LazinContext<T>) {
-    let base_dir = ctx.path();
-    fs::create_dir(base_dir.join(DEFAULT_BASE_DIR))
-        .expect_with_context(format_args!("empty {DEFAULT_BASE_DIR} directory",));
-}
 
 fn assert_output_success(output: &Output) {
     assert!(
@@ -53,15 +45,15 @@ fn assert_creates_default_files<T: LazinFactory>(ctx: &mut LazinContext<T>, outp
 
 #[lazin_test]
 fn init(mut ctx: LazinInitContext) {
-    let output = ctx.lazin.output();
+    let output = ctx.run();
     assert_creates_default_files(&mut ctx, &output);
 }
 
-#[lazin_test(setup_empty_dir(ctx))]
+#[lazin_test(setup_empty_lazin_dir(ctx))]
 fn init_on_existing_empty_dir(mut ctx: LazinInitContext) {
     assert_path_exists(ctx.join_path(DEFAULT_BASE_DIR));
 
-    let output = ctx.lazin.output();
+    let output = ctx.run();
     assert_creates_default_files(&mut ctx, &output);
 }
 
@@ -75,7 +67,7 @@ fn init_on_custom_directory(mut ctx: LazinInitContext) {
         .directory(TEST_DIR)
         .expect("failed to set init directory");
 
-    let output = ctx.lazin.output();
+    let output = ctx.run();
     assert_path_exists(ctx.join_path(TEST_DIR));
     assert_path_exists(ctx.join_path_iter([TEST_DIR, DEFAULT_MODULES_FILE]));
     assert_path_exists(ctx.join_path_iter([TEST_DIR, DEFAULT_WORKSPACE_FILE]));

@@ -4,6 +4,7 @@ use lazin_test_utils::expect_ext::ExpectWithContext;
 
 use crate::{cmd::LazinFactory, context::lazin::LazinContext};
 
+mod check;
 mod init;
 
 pub const DEFAULT_BASE_DIR: &str = "lazin";
