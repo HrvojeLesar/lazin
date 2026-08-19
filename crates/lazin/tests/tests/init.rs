@@ -1,6 +1,6 @@
 use std::{path::Path, process::Output};
 
-use lazin_test_macros::lazin_test;
+use lazin_test_macros::{lazin_assert, lazin_test};
 use lazin_test_utils::expect_ext::ExpectWithContext;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 };
 
 fn assert_output_success(output: &Output) {
-    assert!(
+    lazin_assert!(
         output.status.success(),
         "unexpected exit: '{:#?}'",
         output.status
@@ -25,7 +25,7 @@ fn assert_path_exists<P: AsRef<Path>>(path: P) {
         "failed to check if path: '{:#?}' exists",
         path.as_ref()
     ));
-    assert!(exists, "path does not exist: '{:#?}'", path.as_ref());
+    lazin_assert!(exists, "path does not exist: '{:#?}'", path.as_ref());
 }
 
 fn assert_path_does_not_exist<P: AsRef<Path>>(path: P) {
@@ -33,7 +33,7 @@ fn assert_path_does_not_exist<P: AsRef<Path>>(path: P) {
         "failed to check if path: '{:#?}' exists",
         path.as_ref()
     ));
-    assert!(!exists, "path exist: '{:#?}'", path.as_ref());
+    lazin_assert!(!exists, "path exist: '{:#?}'", path.as_ref());
 }
 
 fn assert_creates_default_files<T: LazinFactory>(ctx: &mut LazinContext<T>, output: &Output) {

@@ -6,7 +6,7 @@ use std::{
 };
 
 use lazin_error::LazinResult;
-use lazin_test_macros::lazin_test;
+use lazin_test_macros::{lazin_assert, lazin_test};
 use lazin_test_utils::expect_ext::ExpectWithContext;
 
 use crate::{
@@ -169,8 +169,7 @@ fn check(mut ctx: LazinCheckContext) {
     let output = ctx.run();
     let stdout = ctx.stdout(&output);
 
-    // TODO: custom asserts
-    assert!(
+    lazin_assert!(
         output.status.success(),
         "expected a successfull check status, got: {}, stdout: {}, stderr: {}",
         output.status.success(),
@@ -178,7 +177,7 @@ fn check(mut ctx: LazinCheckContext) {
         ctx.stderr(&output)
     );
 
-    assert!(
+    lazin_assert!(
         stdout.contains("valid"),
         "expectd 'valid' in stdout, got: {}",
         stdout

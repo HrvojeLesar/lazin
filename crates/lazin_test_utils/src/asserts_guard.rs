@@ -5,6 +5,7 @@ thread_local! {
 }
 
 #[inline]
+#[track_caller]
 pub fn assert_failed(msg: String) {
     LAZIN_FAILURES.with(|f| f.borrow_mut().push(msg));
 }
