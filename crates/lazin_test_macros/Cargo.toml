@@ -1,6 +1,6 @@
 [package]
 name = "lazin_test_macros"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [lib]
@@ -9,4 +9,4 @@ proc-macro = true
 [dependencies]
 syn = { version = "3", features = ["full"] }
 quote = "1"
-lazin_test_utils = { path = "../lazin_test_utils", version = "0.1.0" }
+lazin_test_utils = { path = "../lazin_test_utils", version = "0.1.1" }

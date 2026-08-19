@@ -4,6 +4,7 @@ use syn::{ItemFn, Signature, parse_macro_input, punctuated::Punctuated};
 
 use crate::test_args::LazinTestArgs;
 
+mod asserts;
 mod test_args;
 
 #[proc_macro_attribute]
@@ -73,10 +74,15 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let signature = strip_signature(signature);
 
+    let assert_guard = quote! {
+        let __lazin_assert_guard = ::lazin_test_utils::asserts_guard::AssertGuard::new();
+    };
+
     quote! {
         #(#attributes)*
         #[test]
         #visibility #signature {
+            #assert_guard
             #(#context_setup)*
             #(#before_calls)*
             #teardown
@@ -91,4 +97,22 @@ fn strip_signature(signature: &Signature) -> Signature {
     signature.inputs = Punctuated::new();
 
     signature
+}
+
+/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used
+#[proc_macro]
+pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
+    asserts::lazin_assert_eq(input)
+}
+
+/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used
+#[proc_macro]
+pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
+    asserts::lazin_assert_ne(input)
+}
+
+/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used
+#[proc_macro]
+pub fn lazin_assert(input: TokenStream) -> TokenStream {
+    asserts::lazin_assert(input)
 }
