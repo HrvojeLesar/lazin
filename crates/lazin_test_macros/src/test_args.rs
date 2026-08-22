@@ -1,5 +1,5 @@
 use syn::{
-    Ident, Path, Token, parenthesized,
+    Ident, Lit, LitStr, Path, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
 };
@@ -75,16 +75,41 @@ fn parse_fns(input: ParseStream) -> syn::Result<Punctuated<FnCall, Token![,]>> {
     Punctuated::parse_terminated(input)
 }
 
-pub struct CallArg {
-    pub mutability: bool,
-    pub ident: Ident,
+pub enum CallArg {
+    Ident { mutability: bool, ident: Ident },
+    Literal(Lit),
+    Some(Lit),
+    None,
 }
 
 impl Parse for CallArg {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(LitStr) {
+            let lit = input.parse()?;
+            return Ok(CallArg::Literal(lit));
+        }
+
+        if input.peek(Ident) {
+            let fork = input.fork();
+            let ident: Ident = fork.parse()?;
+
+            if ident == "Some" && fork.peek(syn::token::Paren) {
+                input.parse::<Ident>()?; // consume "Some"
+                let content;
+                parenthesized!(content in input);
+                let inner = content.parse()?;
+                return Ok(CallArg::Some(inner));
+            }
+
+            if ident == "None" {
+                input.parse::<Ident>()?;
+                return Ok(CallArg::None);
+            }
+        }
+
         let mutability = input.parse::<Token![mut]>().is_ok();
         let ident: Ident = input.parse()?;
-        Ok(CallArg { mutability, ident })
+        Ok(CallArg::Ident { mutability, ident })
     }
 }
 
