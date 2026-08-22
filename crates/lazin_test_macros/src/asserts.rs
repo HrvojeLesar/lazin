@@ -38,9 +38,7 @@ pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
     let message = match args {
         Some(args) => quote! {
             format!(
-                "{}:{}: eq assertion failed: `{}`\n  left: {:#?}\n right: {:#?}",
-                file!(),
-                line!(),
+                "eq assertion failed: `{}`\n  left: {:#?}\n right: {:#?}",
                 format!(#args),
                 left_val,
                 right_val,
@@ -48,9 +46,7 @@ pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
         },
         None => quote! {
             format!(
-                "{}:{}: eq assertion failed:\n  left: {:#?}\n right: {:#?}",
-                file!(),
-                line!(),
+                "eq assertion failed:\n  left: {:#?}\n right: {:#?}",
                 left_val,
                 right_val,
             )
@@ -61,7 +57,10 @@ pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
         match (&#left, &#right) {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
-                    ::lazin_test_utils::asserts_guard::assert_failed(#message);
+                    let __lazin_loc = ::std::panic::Location::caller();
+                    ::lazin_test_utils::asserts_guard::assert_failed(
+                        format!("{}:{}: {}", __lazin_loc.file(), __lazin_loc.line(), #message)
+                    );
                 }
             }
         }
@@ -76,9 +75,7 @@ pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
     let message = match args {
         Some(args) => quote! {
             format!(
-                "{}:{}: ne assertion failed: `{}`\n  left: {:#?}\n right: {:#?}",
-                file!(),
-                line!(),
+                "ne assertion failed: `{}`\n  left: {:#?}\n right: {:#?}",
                 format!(#args),
                 left_val,
                 right_val,
@@ -86,9 +83,7 @@ pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
         },
         None => quote! {
             format!(
-                "{}:{}: ne assertion failed:\n  left: {:#?}\n right: {:#?}",
-                file!(),
-                line!(),
+                "ne assertion failed:\n  left: {:#?}\n right: {:#?}",
                 left_val,
                 right_val,
             )
@@ -99,7 +94,10 @@ pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
         match (&#left, &#right) {
             (left_val, right_val) => {
                 if *left_val == *right_val {
-                    ::lazin_test_utils::asserts_guard::assert_failed(#message);
+                    let __lazin_loc = ::std::panic::Location::caller();
+                    ::lazin_test_utils::asserts_guard::assert_failed(
+                        format!("{}:{}: {}", __lazin_loc.file(), __lazin_loc.line(), #message)
+                    );
                 }
             }
         }
@@ -132,35 +130,29 @@ pub fn lazin_assert(input: TokenStream) -> TokenStream {
     let AssertInput { cond, args } = parse_macro_input!(input as AssertInput);
 
     let message = match args {
-        Some(args) => {
-            quote! {
-                format!(
-                    "{}:{}: assertion failed: `{}`\n  condition: {:#?}",
-                    file!(),
-                    line!(),
-                    format!(#args),
-                    cond_val,
-                )
-            }
-        }
-
-        None => {
-            quote! {
-                format!(
-                    "{}:{}: assertion failed:\n  condition: {:#?}",
-                    file!(),
-                    line!(),
-                    cond_val,
-                )
-            }
-        }
+        Some(args) => quote! {
+            format!(
+                "assertion failed: `{}`\n  condition: {:#?}",
+                format!(#args),
+                cond_val,
+            )
+        },
+        None => quote! {
+            format!(
+                "assertion failed:\n  condition: {:#?}",
+                cond_val,
+            )
+        },
     };
 
     quote! {
-        match &#cond {
+        match #cond {
             cond_val => {
-                if !*cond_val {
-                    ::lazin_test_utils::asserts_guard::assert_failed(#message);
+                if !cond_val {
+                    let __lazin_loc = ::std::panic::Location::caller();
+                    ::lazin_test_utils::asserts_guard::assert_failed(
+                        format!("{}:{}: {}", __lazin_loc.file(), __lazin_loc.line(), #message)
+                    );
                 }
             }
         }

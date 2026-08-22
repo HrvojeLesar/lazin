@@ -4,7 +4,9 @@ use syn::{ItemFn, Signature, parse_macro_input, punctuated::Punctuated};
 
 use crate::test_args::LazinTestArgs;
 
+#[doc(hidden)]
 mod asserts;
+#[doc(hidden)]
 mod test_args;
 
 #[proc_macro_attribute]
@@ -20,13 +22,18 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let before_calls = args.before.iter().map(|call| {
         let path = &call.path;
-        let call_args = call.args.iter().map(|arg| {
-            let ident = &arg.ident;
-            if arg.mutability {
-                quote! { &mut #ident }
-            } else {
-                quote! { &#ident }
+        let call_args = call.args.iter().map(|arg| match arg {
+            test_args::CallArg::Ident { mutability, ident } => {
+                if *mutability {
+                    quote! { &mut #ident }
+                } else {
+                    quote! { &#ident }
+                }
             }
+
+            test_args::CallArg::Literal(lit) => quote! { #lit },
+            test_args::CallArg::Some(lit) => quote! { Some(#lit) },
+            test_args::CallArg::None => quote! { None },
         });
 
         quote! { #path(#(#call_args),*); }
@@ -99,19 +106,52 @@ fn strip_signature(signature: &Signature) -> Signature {
     signature
 }
 
-/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used
+/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used.
+/// If used in helper functions, the whole function chain should be annotated with #\[track_caller\].
+///
+/// # Example
+///
+/// ```
+/// # use lazin_test_macros::lazin_assert_eq;
+/// #[track_caller]
+/// fn helper_fn() {
+///     lazin_assert_eq!(true, false, "Glorious comparison");
+/// }
+/// ```
 #[proc_macro]
 pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
     asserts::lazin_assert_eq(input)
 }
 
-/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used
+/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used.
+/// If used in helper functions, the whole function chain should be annotated with #\[track_caller\].
+///
+/// # Example
+///
+/// ```
+/// # use lazin_test_macros::lazin_assert_ne;
+/// #[track_caller]
+/// fn helper_fn() {
+///     lazin_assert_ne!(true, true, "Glorious comparison");
+/// }
+/// ```
 #[proc_macro]
 pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
     asserts::lazin_assert_ne(input)
 }
 
-/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used
+/// Expected to be used in #\[lazin_test\], will silenty do nothing if not used.
+/// If used in helper functions, the whole function chain should be annotated with #\[track_caller\].
+///
+/// # Example
+///
+/// ```
+/// # use lazin_test_macros::lazin_assert;
+/// #[track_caller]
+/// fn helper_fn() {
+///     lazin_assert!(true == false, "Glorious comparison");
+/// }
+/// ```
 #[proc_macro]
 pub fn lazin_assert(input: TokenStream) -> TokenStream {
     asserts::lazin_assert(input)
