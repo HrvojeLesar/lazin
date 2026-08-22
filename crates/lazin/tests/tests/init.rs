@@ -49,7 +49,7 @@ fn init(mut ctx: LazinInitContext) {
     assert_creates_default_files(&mut ctx, &output);
 }
 
-#[lazin_test(setup_empty_lazin_dir(ctx))]
+#[lazin_test(setup_empty_lazin_dir(ctx, None))]
 fn init_on_existing_empty_dir(mut ctx: LazinInitContext) {
     assert_path_exists(ctx.join_path(DEFAULT_BASE_DIR));
 
