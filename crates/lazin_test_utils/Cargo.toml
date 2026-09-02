@@ -2,5 +2,8 @@
 name = "lazin_test_utils"
 version = "0.1.1"
 edition = "2024"
+description = "Simple various testing utilities"
+license = "MIT"
+homepage = "https://github.com/HrvojeLesar/lazin"
 
 [dependencies]
