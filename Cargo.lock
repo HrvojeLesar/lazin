@@ -233,7 +233,7 @@ version = "0.1.0"
 
 [[package]]
 name = "lazin_test_macros"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "lazin_test_utils",
  "quote",
@@ -242,7 +242,7 @@ dependencies = [
 
 [[package]]
 name = "lazin_test_utils"
-version = "0.1.1"
+version = "0.1.2"
 
 [[package]]
 name = "libc"
