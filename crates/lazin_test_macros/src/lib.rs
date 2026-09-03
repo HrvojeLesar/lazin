@@ -53,8 +53,8 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let ty = &pat_type.ty;
 
                 context_setup.push(quote! {
-                    let #pat = ::lazin_test_utils::context::TestContextDropGuard::new(
-                        <#ty as ::lazin_test_utils::context::TestContext>::setup()
+                    let #pat = ::lazin_test::context::TestContextDropGuard::new(
+                        <#ty as ::lazin_test::context::TestContext>::setup()
                     );
                 });
             }
@@ -82,7 +82,7 @@ pub fn lazin_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     let signature = strip_signature(signature);
 
     let assert_guard = quote! {
-        let __lazin_assert_guard = ::lazin_test_utils::asserts_guard::AssertGuard::new();
+        let __lazin_assert_guard = ::lazin_test::asserts_guard::AssertGuard::new();
     };
 
     quote! {
@@ -111,7 +111,7 @@ fn strip_signature(signature: &Signature) -> Signature {
 ///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// # use lazin_test_macros::lazin_assert_eq;
 /// #[track_caller]
 /// fn helper_fn() {
@@ -128,7 +128,7 @@ pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// # use lazin_test_macros::lazin_assert_ne;
 /// #[track_caller]
 /// fn helper_fn() {
@@ -145,7 +145,7 @@ pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// # use lazin_test_macros::lazin_assert;
 /// #[track_caller]
 /// fn helper_fn() {

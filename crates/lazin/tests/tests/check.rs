@@ -1,5 +1,5 @@
-use lazin_test_macros::{lazin_assert, lazin_test};
-use lazin_test_utils::expect_ext::ExpectWithContext;
+use lazin_test::expect_ext::ExpectWithContext;
+use lazin_test::{lazin_assert, lazin_test};
 
 use crate::{
     cmd::LazinFactory,

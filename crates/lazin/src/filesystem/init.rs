@@ -98,7 +98,7 @@ mod test {
 
     use crate::filesystem::init::{init_default_config, init_directory};
 
-    use lazin_test_utils::temp::TempDir;
+    use lazin_test::temp::TempDir;
 
     #[test]
     fn temp_default_config() {

@@ -1,6 +1,6 @@
 [package]
 name = "lazin"
-version = "1.0.4"
+version = "1.0.5"
 edition = "2024"
 authors = ["Hrvoje Lesar <hrvoje.lesar1@hotmail.com>"]
 description = "Primarily a dotfiles manager"
@@ -22,5 +22,4 @@ sha2 = "=0.10.9"
 toml = "1.1.2"
 
 [dev-dependencies]
-lazin_test_macros = { path = "../lazin_test_macros", version = "0.1.2" }
-lazin_test_utils = { path = "../lazin_test_utils", version = "0.1.2" }
+lazin_test = { path = "../lazin_test", version = "0.1.0" }

@@ -6,6 +6,7 @@ members = [
     "crates/lazin_gpg_wrapper",
     "crates/lazin_logger",
     "crates/lazin_pipeline", 
+    "crates/lazin_test", 
     "crates/lazin_test_macros", 
     "crates/lazin_test_utils",
 ]

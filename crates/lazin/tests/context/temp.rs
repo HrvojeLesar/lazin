@@ -1,4 +1,4 @@
-use lazin_test_utils::{context::TestContext, temp::TempDir};
+use lazin_test::{context::TestContext, temp::TempDir};
 
 pub struct TempFilesContext {
     pub tempdir: TempDir,

@@ -58,7 +58,7 @@ pub fn lazin_assert_eq(input: TokenStream) -> TokenStream {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
                     let __lazin_loc = ::std::panic::Location::caller();
-                    ::lazin_test_utils::asserts_guard::assert_failed(
+                    ::lazin_test::asserts_guard::assert_failed(
                         format!("{}:{}: {}", __lazin_loc.file(), __lazin_loc.line(), #message)
                     );
                 }
@@ -95,7 +95,7 @@ pub fn lazin_assert_ne(input: TokenStream) -> TokenStream {
             (left_val, right_val) => {
                 if *left_val == *right_val {
                     let __lazin_loc = ::std::panic::Location::caller();
-                    ::lazin_test_utils::asserts_guard::assert_failed(
+                    ::lazin_test::asserts_guard::assert_failed(
                         format!("{}:{}: {}", __lazin_loc.file(), __lazin_loc.line(), #message)
                     );
                 }
@@ -150,7 +150,7 @@ pub fn lazin_assert(input: TokenStream) -> TokenStream {
             cond_val => {
                 if !cond_val {
                     let __lazin_loc = ::std::panic::Location::caller();
-                    ::lazin_test_utils::asserts_guard::assert_failed(
+                    ::lazin_test::asserts_guard::assert_failed(
                         format!("{}:{}: {}", __lazin_loc.file(), __lazin_loc.line(), #message)
                     );
                 }

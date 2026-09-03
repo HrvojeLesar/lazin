@@ -1,0 +1,11 @@
+[package]
+name = "lazin_test"
+version = "0.1.0"
+edition = "2024"
+description = "Simple testing utilities"
+homepage = "https://github.com/HrvojeLesar/lazin"
+license = "MIT"
+
+[dependencies]
+lazin_test_macros = { path = "../lazin_test_macros", version = "0.1.3" }
+lazin_test_utils = { path = "../lazin_test_utils", version = "0.1.1" }

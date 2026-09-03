@@ -6,7 +6,7 @@ use std::{
 };
 
 use lazin_error::LazinResult;
-use lazin_test_utils::expect_ext::ExpectWithContext;
+use lazin_test::expect_ext::ExpectWithContext;
 
 use crate::{cmd::LazinFactory, context::lazin::LazinContext};
 

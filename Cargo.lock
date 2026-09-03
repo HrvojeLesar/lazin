@@ -199,7 +199,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
 name = "lazin"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "clap",
  "codespan-reporting",
@@ -207,8 +207,7 @@ dependencies = [
  "lazin_gpg_wrapper",
  "lazin_logger",
  "lazin_pipeline",
- "lazin_test_macros",
- "lazin_test_utils",
+ "lazin_test",
  "libc",
  "serde",
  "sha2",
@@ -232,10 +231,18 @@ name = "lazin_pipeline"
 version = "0.1.0"
 
 [[package]]
-name = "lazin_test_macros"
-version = "0.1.2"
+name = "lazin_test"
+version = "0.1.0"
 dependencies = [
+ "lazin_test_macros",
  "lazin_test_utils",
+]
+
+[[package]]
+name = "lazin_test_macros"
+version = "0.1.3"
+dependencies = [
+ "lazin_test",
  "quote",
  "syn 3.0.3",
 ]
