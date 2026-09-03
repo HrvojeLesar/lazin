@@ -14,4 +14,4 @@ quote = "1"
 syn = { version = "3", features = ["full"] }
 
 [dev-dependencies]
-lazin_test = { path = "../lazin_test", version = "0.1.0" }
+lazin_test = { path = "../lazin_test" }
