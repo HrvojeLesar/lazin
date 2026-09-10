@@ -46,6 +46,8 @@ pub enum LazinError {
     StripPrefix(std::path::StripPrefixError),
     GpgWrapper(lazin_gpg_wrapper::Error),
     DuplicateKeys(config::DuplicateKeysError),
+    SudoNotFound,
+    PrivilegedCommandFailed(String),
 }
 
 impl LazinError {
@@ -74,6 +76,13 @@ impl Display for LazinError {
                 write!(f, "Failed to strip prefix: {}", strip_prefix_error)
             }
             LazinError::GpgWrapper(error) => error.fmt(f),
+            LazinError::SudoNotFound => write!(
+                f,
+                "Couldn't determine 'sudo' is executable, it is required to link paths needing elevated permissions"
+            ),
+            LazinError::PrivilegedCommandFailed(command) => {
+                write!(f, "Privileged command failed: {}", command)
+            }
             LazinError::DuplicateKeys(error) => {
                 let messages: Vec<String> = [
                     (!error.workspaces.is_empty()).then(|| format!(
@@ -106,6 +115,8 @@ impl std::error::Error for LazinError {
             LazinError::ModuleNotFound(_, _) => None,
             LazinError::StripPrefix(strip_prefix_error) => strip_prefix_error.source(),
             LazinError::GpgWrapper(error) => error.source(),
+            LazinError::SudoNotFound => None,
+            LazinError::PrivilegedCommandFailed(_) => None,
             LazinError::DuplicateKeys(_) => None,
         }
     }

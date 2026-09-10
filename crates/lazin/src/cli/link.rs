@@ -6,7 +6,7 @@ use lazin_error::LazinResult;
 use crate::{
     common::{self},
     exit_error,
-    filesystem::link::{DryRunLinker, Linker, LinkerOptions},
+    filesystem::link::{DryRunLinker, ElevationPolicy, Linker, LinkerOptions},
 };
 
 /// Link selected workspace modules, by default this performs
@@ -31,6 +31,17 @@ pub(super) struct Link {
     )]
     skip_failed: bool,
     #[arg(
+        long = "sudo",
+        help = "Link paths requiring elevated permissions as root without asking for confirmation, 'sudo' still prompts for a password when its credentials are not cached"
+    )]
+    sudo: bool,
+    #[arg(
+        long = "no-sudo",
+        conflicts_with = "sudo",
+        help = "Never link as root, paths requiring elevated permissions are skipped instead of asking for confirmation"
+    )]
+    no_sudo: bool,
+    #[arg(
         short = 'g',
         long = "gitignore",
         help = "Gitignore file, can be a non existing file to not use gitignore at all. By default looks for .gitignore in the current working directory"
@@ -50,6 +61,7 @@ impl Link {
         let linker_options = LinkerOptions {
             force: self.force,
             should_skip_failed_encryption_decryption: self.skip_failed,
+            elevation_policy: self.elevation_policy(),
         };
 
         if !self.link {
@@ -66,5 +78,13 @@ impl Link {
         }
 
         Ok(())
+    }
+
+    fn elevation_policy(&self) -> ElevationPolicy {
+        match (self.sudo, self.no_sudo) {
+            (true, _) => ElevationPolicy::Always,
+            (_, true) => ElevationPolicy::Never,
+            _ => ElevationPolicy::Prompt,
+        }
     }
 }

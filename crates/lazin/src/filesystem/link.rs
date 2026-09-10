@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
@@ -6,6 +7,9 @@ use lazin_error::{Context, LazinResult};
 
 use crate::encryption_management::EncryptionManager;
 use crate::error::LazinError;
+use crate::filesystem::privileged::ElevationCheck;
+#[cfg(unix)]
+use crate::filesystem::privileged::Elevator;
 use crate::resolve;
 
 #[allow(unused)]
@@ -15,6 +19,20 @@ enum FileType {
     File,
     Override,
     Missing,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum ElevationPolicy {
+    #[default]
+    Prompt,
+    Always,
+    Never,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Performed {
+    Yes,
+    Skipped,
 }
 
 pub enum PathComparison {
@@ -27,7 +45,7 @@ pub enum PathComparison {
 
 pub trait Linker {
     fn link(&mut self, workspace_name: &str) -> LazinResult<()>;
-    fn create_dir_all(&self, path: &Path) -> LazinResult<()>;
+    fn create_dir_all(&self, path: &Path) -> LazinResult<Performed>;
 
     // TODO: Fix failures on invalid symlinks
     fn compare_symlink(&self, source: &Path, target: &Path) -> LazinResult<PathComparison> {
@@ -63,6 +81,7 @@ pub trait Linker {
 pub struct LinkerOptions {
     pub force: bool,
     pub should_skip_failed_encryption_decryption: bool,
+    pub elevation_policy: ElevationPolicy,
 }
 
 #[cfg(unix)]
@@ -70,6 +89,7 @@ pub struct UnixFSLinker {
     config: resolve::config::Config,
     force: bool,
     should_skip_failed_encryption_decryption: bool,
+    elevator: Elevator,
 }
 
 impl UnixFSLinker {
@@ -79,6 +99,7 @@ impl UnixFSLinker {
             force: linker_options.force,
             should_skip_failed_encryption_decryption: linker_options
                 .should_skip_failed_encryption_decryption,
+            elevator: Elevator::new(linker_options.elevation_policy),
         }
     }
 }
@@ -99,13 +120,25 @@ impl Linker for UnixFSLinker {
         Ok(())
     }
 
-    fn create_dir_all(&self, path: &Path) -> LazinResult<()> {
-        create_parent_directories(path)
+    fn create_dir_all(&self, path: &Path) -> LazinResult<Performed> {
+        let Some(parent_directory) = missing_parent_directory(path) else {
+            return Ok(Performed::Yes);
+        };
+
+        match fs::create_dir_all(parent_directory) {
+            Ok(()) => {
+                lazin_logger::info!("Creating directory: {}", parent_directory.display());
+
+                Ok(Performed::Yes)
+            }
+            Err(e) if e.kind() == ErrorKind::PermissionDenied => {
+                self.elevator.create_dir_all(parent_directory)
+            }
+            Err(e) => Err(e).context("Failed to create directories"),
+        }
     }
 
     fn symlink(&self, source: &Path, target: &Path) -> LazinResult<()> {
-        use std::os::unix::fs::symlink;
-
         let abolute_source =
             fs::canonicalize(source).context("Failed to get absolute path for source")?;
 
@@ -115,29 +148,24 @@ impl Linker for UnixFSLinker {
             target.display()
         );
 
-        // TODO: add sudo linking, config option to prompt for sudo when linking
-        // a file which requires elevated permissions
-        if target.exists() {
-            match fs::remove_file(target) {
-                Ok(_) => {}
-                Err(e) => match e.kind() {
-                    std::io::ErrorKind::PermissionDenied => {
+        match replace_with_symlink(&abolute_source, target) {
+            Ok(()) => copy_permissions(&abolute_source, target),
+            Err(e) if e.kind() == ErrorKind::PermissionDenied => {
+                match self.elevator.symlink(&abolute_source, target)? {
+                    Performed::Yes => Ok(()),
+                    Performed::Skipped => {
                         lazin_logger::warn!(
-                            "Failed to remove existing file at target: '{}', this file will be skipped",
+                            "Skipping linking {} -> {} - target requires elevated permissions",
+                            abolute_source.display(),
                             target.display()
                         );
 
-                        return Ok(());
+                        Ok(())
                     }
-                    _ => Err(e).context("Failed to remove file before linking")?,
-                },
+                }
             }
+            Err(e) => Err(e).context("Failed to symlink"),
         }
-
-        symlink(&abolute_source, target).context("Failed to symlink")?;
-        copy_permissions(&abolute_source, target)?;
-
-        Ok(())
     }
 }
 
@@ -146,6 +174,8 @@ pub struct DryRunLinker {
     filesystem: RefCell<BTreeMap<PathBuf, FileType>>,
     force: bool,
     should_skip_failed_encryption_decryption: bool,
+    elevation_policy: ElevationPolicy,
+    elevation_check: ElevationCheck,
 }
 
 impl DryRunLinker {
@@ -156,6 +186,8 @@ impl DryRunLinker {
             force: linker_options.force,
             should_skip_failed_encryption_decryption: linker_options
                 .should_skip_failed_encryption_decryption,
+            elevation_policy: linker_options.elevation_policy,
+            elevation_check: ElevationCheck::default(),
         }
     }
 }
@@ -175,9 +207,9 @@ impl Linker for DryRunLinker {
         Ok(())
     }
 
-    fn create_dir_all(&self, mut path: &Path) -> LazinResult<()> {
+    fn create_dir_all(&self, mut path: &Path) -> LazinResult<Performed> {
         if !path.is_dir() {
-            return Ok(());
+            return Ok(Performed::Yes);
         }
 
         lazin_logger::info!("Creating directory: {}", path.display());
@@ -193,11 +225,29 @@ impl Linker for DryRunLinker {
                 .insert(path.into(), FileType::Directory);
         }
 
-        Ok(())
+        Ok(Performed::Yes)
     }
 
     fn symlink(&self, source: &Path, target: &Path) -> LazinResult<()> {
-        lazin_logger::info!("Linking {} -> {}", source.display(), target.display());
+        match (
+            self.elevation_check.requires_elevation(target),
+            self.elevation_policy,
+        ) {
+            (false, _) => {
+                lazin_logger::info!("Linking {} -> {}", source.display(), target.display())
+            }
+            (true, ElevationPolicy::Never) => lazin_logger::warn!(
+                "Skipping linking {} -> {} - target requires elevated permissions",
+                source.display(),
+                target.display()
+            ),
+            (true, _) => lazin_logger::info!(
+                "Linking {} -> {} (requires elevated permissions)",
+                source.display(),
+                target.display()
+            ),
+        }
+
         self.filesystem
             .borrow_mut()
             .insert(source.into(), FileType::Link);
@@ -221,7 +271,15 @@ fn link<T: Linker>(
         for module_value in &module.values {
             let source = &module_value.source;
             let target = &module_value.target;
-            linker.create_dir_all(target)?;
+            if let Performed::Skipped = linker.create_dir_all(target)? {
+                lazin_logger::warn!(
+                    "Skipping linking {} -> {} - creating the parent directories requires elevated permissions",
+                    source.display(),
+                    target.display()
+                );
+
+                continue;
+            }
             match (linker.compare_symlink(source, target)?, options.force) {
                 (PathComparison::TargetLinkMissing, _)
                 | (PathComparison::TargetAndSourceAlreadyLinked, true)
@@ -303,13 +361,17 @@ fn copy_permissions(source: &Path, target: &Path) -> LazinResult<()> {
     Ok(())
 }
 
-fn create_parent_directories(target: &Path) -> LazinResult<()> {
-    if let Some(parent_dir) = target.parent()
-        && !parent_dir.exists()
-    {
-        fs::create_dir_all(parent_dir).context("Failed to create directories")?;
-        lazin_logger::info!("Creating directory: {}", parent_dir.display());
+fn missing_parent_directory(target: &Path) -> Option<&Path> {
+    target.parent().filter(|parent_dir| !parent_dir.exists())
+}
+
+#[cfg(unix)]
+fn replace_with_symlink(source: &Path, target: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::symlink;
+
+    if target.exists() {
+        fs::remove_file(target)?;
     }
 
-    Ok(())
+    symlink(source, target)
 }
