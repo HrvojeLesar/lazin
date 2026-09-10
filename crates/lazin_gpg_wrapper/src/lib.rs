@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     path::Path,
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
 };
 
 #[derive(Debug)]
@@ -63,11 +63,10 @@ pub fn is_gpg_available() -> Result<(), Error> {
         .map(|_| ())
 }
 
-// TODO: handle keys with passphrase
 pub fn encrypt_file(options: EncryptOptions) -> Result<(), Error> {
     is_gpg_available()?;
 
-    let result = Command::new("gpg")
+    let result = run(Command::new("gpg")
         .arg("--encrypt")
         .arg("--recipient")
         .arg(options.recipient)
@@ -75,8 +74,7 @@ pub fn encrypt_file(options: EncryptOptions) -> Result<(), Error> {
         .arg(options.output)
         .arg("--batch")
         .arg("--yes")
-        .arg(options.input)
-        .output()?;
+        .arg(options.input))?;
 
     match result.status.success() {
         true => Ok(()),
@@ -87,22 +85,31 @@ pub fn encrypt_file(options: EncryptOptions) -> Result<(), Error> {
     }
 }
 
-// TODO: handle keys with passphrase
 pub fn decrypt_file(options: DecryptOptions) -> Result<(), Error> {
     is_gpg_available()?;
 
-    let result = Command::new("gpg")
+    let result = run(Command::new("gpg")
         .args(["--decrypt", "--batch", "--yes", "--quiet"])
         .arg("--output")
         .arg(options.output)
-        .arg(options.input)
-        .output()?;
+        .arg(options.input))?;
 
     match result.status.success() {
         true => Ok(()),
         false => {
             let stderr_string = String::from_utf8_lossy(&result.stderr);
-            Err(Error::EncryptionFailed(stderr_string.to_string()))
+            Err(Error::DecryptionFailed(stderr_string.to_string()))
         }
     }
+}
+
+fn run(command: &mut Command) -> Result<Output, Error> {
+    let output = command
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?
+        .wait_with_output()?;
+
+    Ok(output)
 }

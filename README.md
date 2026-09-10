@@ -73,4 +73,4 @@ another workspace
 - [ ] Thinkup a better solution than reserving `config` as a keyword in modules
 - [x] Allow linking to directories requiring a privileged user
 - [x] Add message when running as sudo
-- [ ] Update gpg wrapper to allow using passphrases in keys
+- [x] Update gpg wrapper to allow using passphrases in keys
