@@ -1,6 +1,6 @@
 [package]
 name = "lazin_error"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 authors = ["Hrvoje Lesar <hrvoje.lesar1@hotmail.com>"]
 description = "Simple anyhow like errors"

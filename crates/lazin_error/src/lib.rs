@@ -167,3 +167,9 @@ where
         (TypeId::of::<E>() == target).then_some(&self.0 as &dyn Any)
     }
 }
+
+impl From<LazinError> for Box<dyn StdError + Send + Sync + 'static> {
+    fn from(value: LazinError) -> Self {
+        value.0
+    }
+}
