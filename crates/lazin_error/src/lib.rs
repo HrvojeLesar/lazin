@@ -2,25 +2,34 @@ use std::fmt::{Debug, Display};
 
 pub type LazinResult<T = (), E = LazinError> = Result<T, E>;
 
+use std::any::{Any, TypeId};
 use std::error::Error as StdError;
 
 #[derive(Debug)]
-pub struct LazinError(Box<dyn StdError + Send + Sync + 'static>);
+pub struct LazinError(Box<dyn Walk>);
 
 impl LazinError {
     fn new<E>(error: E) -> Self
     where
         E: StdError + Send + Sync + 'static,
     {
-        LazinError(Box::new(error))
+        LazinError(Box::new(WalkableErrorWrapper(error)))
     }
 
-    pub fn is<E: StdError + 'static>(&self) -> bool {
-        self.0.is::<E>()
+    fn from_context<C, E>(context: C, error: E) -> Self
+    where
+        C: Debug + Display + Send + Sync + 'static,
+        E: Debug + Display + Send + Sync + 'static,
+    {
+        LazinError(Box::new(LazinContextError { context, error }))
     }
 
-    pub fn downcast_ref<E: StdError + 'static>(&self) -> Option<&E> {
-        self.0.downcast_ref::<E>()
+    pub fn is<E: 'static>(&self) -> bool {
+        self.downcast_ref::<E>().is_some()
+    }
+
+    pub fn downcast_ref<E: 'static>(&self) -> Option<&E> {
+        self.0.walk(TypeId::of::<E>())?.downcast_ref()
     }
 }
 
@@ -37,6 +46,10 @@ impl Display for LazinError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.0, f)
     }
+}
+
+trait Walk: StdError + Send + Sync + 'static {
+    fn walk(&self, target: TypeId) -> Option<&dyn Any>;
 }
 
 #[derive(Debug)]
@@ -62,6 +75,27 @@ where
 {
 }
 
+impl<C, E> Walk for LazinContextError<C, E>
+where
+    C: Debug + Display + Send + Sync + 'static,
+    E: Debug + Display + Send + Sync + 'static,
+{
+    fn walk(&self, target: TypeId) -> Option<&dyn Any> {
+        if TypeId::of::<C>() == target {
+            return Some(&self.context as &dyn Any);
+        }
+
+        if TypeId::of::<E>() == target {
+            return Some(&self.error as &dyn Any);
+        }
+
+        (&self.error as &dyn Any)
+            .downcast_ref::<LazinError>()?
+            .0
+            .walk(target)
+    }
+}
+
 pub trait Context<T> {
     fn context<C>(self, context: C) -> Result<T, LazinError>
     where
@@ -81,7 +115,7 @@ where
     {
         match self {
             Ok(o) => Ok(o),
-            Err(error) => Err(LazinError::new(LazinContextError { context, error })),
+            Err(error) => Err(LazinError::from_context(context, error)),
         }
     }
 
@@ -91,10 +125,45 @@ where
     {
         match self {
             Ok(o) => Ok(o),
-            Err(error) => Err(LazinError::new(LazinContextError {
-                context: context(),
-                error,
-            })),
+            Err(error) => Err(LazinError::from_context(context(), error)),
         }
+    }
+}
+
+struct WalkableErrorWrapper<E>(E);
+
+impl<E> Debug for WalkableErrorWrapper<E>
+where
+    E: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl<E> Display for WalkableErrorWrapper<E>
+where
+    E: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl<E> StdError for WalkableErrorWrapper<E>
+where
+    E: StdError + Send + Sync + 'static,
+{
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.0.source()
+    }
+}
+
+impl<E> Walk for WalkableErrorWrapper<E>
+where
+    E: StdError + Send + Sync + 'static,
+{
+    fn walk(&self, target: TypeId) -> Option<&dyn Any> {
+        (TypeId::of::<E>() == target).then_some(&self.0 as &dyn Any)
     }
 }
